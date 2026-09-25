@@ -11,8 +11,10 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
+  height: 100vh;
   min-height: 100vh;
   padding: 24px 18px;
+  overflow: hidden;
   background: var(--navy-900);
   color: #fff;
 }
@@ -26,18 +28,78 @@
   color: rgba(255, 255, 255, 0.58);
 }
 
+.sidebar-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+
 .sidebar-label {
-  padding: 0 12px;
   color: rgba(255, 255, 255, 0.44);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
 
+.sidebar-context__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.sidebar-context__status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #65c990;
+  box-shadow: 0 0 0 3px rgba(101, 201, 144, 0.12);
+}
+
 .sidebar-nav {
   display: grid;
-  gap: 5px;
-  margin-top: 10px;
+  flex: 1;
+  gap: 4px;
+  min-height: 0;
+  margin: 0 -5px;
+  padding: 0 5px 12px;
+  overflow-y: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar-section {
+  padding-top: 11px;
+}
+
+.sidebar-section + .sidebar-section {
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.sidebar-section__title {
+  margin: 0 10px 6px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.sidebar-section__links {
+  display: grid;
+  gap: 3px;
+}
+
+.sidebar-link .icon {
+  display: inline-grid;
+  width: 20px;
+  place-items: center;
+  color: var(--gold-400);
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .sidebar-link {
@@ -86,7 +148,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: auto;
+  flex: 0 0 auto;
+  margin-top: 4px;
   padding: 16px 8px 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -113,9 +176,15 @@
   font-size: 0.78rem;
 }
 
+.sidebar-user__chevron {
+  margin-inline-start: auto;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 1.25rem;
+}
+
 .dashboard-main {
   min-width: 0;
-  padding: 28px clamp(20px, 4vw, 48px) 56px;
+  padding: 0 clamp(20px, 4vw, 48px) 56px;
 }
 
 .dashboard-mobilebar {
@@ -128,6 +197,127 @@
 
 .dashboard-mobilebar .brand {
   display: inline-flex;
+}
+
+.dashboard-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 84px;
+  margin: 0 calc(clamp(20px, 4vw, 48px) * -1) 32px;
+  padding: 15px clamp(20px, 4vw, 48px);
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.topbar-context,
+.topbar-context strong {
+  display: block;
+}
+
+.topbar-context strong {
+  margin-top: 5px;
+  color: var(--navy-900);
+  font-size: 1.02rem;
+}
+
+.topbar-breadcrumb {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.topbar-breadcrumb b {
+  margin: 0 5px;
+  color: var(--gold-500);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(300px, 28vw);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.topbar-search input {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.topbar-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--navy-900);
+  font-size: 1.1rem;
+}
+
+.topbar-icon__dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--gold-500);
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 155px;
+  color: var(--text-primary);
+}
+
+.topbar-user > span:not(.avatar):not(.topbar-user__chevron) {
+  display: grid;
+  gap: 2px;
+}
+
+.topbar-user strong,
+.topbar-user small {
+  display: block;
+  white-space: nowrap;
+}
+
+.topbar-user strong {
+  font-size: 0.82rem;
+}
+
+.topbar-user small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.topbar-user__chevron {
+  margin-inline-start: auto;
+  color: var(--text-muted);
 }
 
 .sidebar-toggle,

@@ -54,6 +54,10 @@
     display: block;
   }
 
+  .dashboard-topbar {
+    display: none;
+  }
+
   .dashboard-sidebar {
     position: fixed;
     top: 0;

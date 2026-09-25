@@ -47,6 +47,30 @@
     return `<aside class="dashboard-sidebar" aria-label="القائمة الجانبية"><button class="sidebar-close" type="button" aria-label="إغلاق القائمة" data-sidebar-close>×</button><a class="brand" href="${prefix()}index.html" aria-label="العودة للرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy">MOWAKAL<small>منصة الخدمات القانونية</small></span></a><div class="sidebar-context"><span class="sidebar-label">${config.label}</span><span class="sidebar-context__status"><i></i> متصل الآن</span></div><nav class="sidebar-nav">${groups}</nav><div class="sidebar-user"><span class="avatar avatar--sm avatar--light" aria-hidden="true">${config.user[0].slice(0, 2)}</span><span class="sidebar-user__copy"><strong>${config.user[0]}</strong><span>${config.user[1]}</span></span><span class="sidebar-user__chevron" aria-hidden="true">‹</span></div></aside>`;
   }
 
+  function publicHeaderMarkup() {
+    const current = document.body.dataset.page || "";
+    const home = prefix() + "index.html";
+    const howItWorks = current === "home" ? "#how-it-works" : home + "#how-it-works";
+    const services = current === "home" ? "#services" : home + "#services";
+    return `<header class="public-header"><div class="container public-header__inner"><a class="brand" href="${home}" aria-label="العودة إلى الصفحة الرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy">MOWAKAL<small>منصة الخدمات القانونية</small></span></a><nav class="public-nav" id="public-nav" aria-label="التنقل الرئيسي"><a class="public-nav__link ${current === "home" ? "is-active" : ""}" href="${home}">الرئيسية</a><a class="public-nav__link ${current === "lawyers" || current === "lawyer-profile" ? "is-active" : ""}" href="${prefix()}client/lawyers.html">المحامون</a><a class="public-nav__link" href="${services}">الخدمات</a><a class="public-nav__link" href="${howItWorks}">كيف تعمل</a></nav><div class="public-header__actions"><a class="button button--outline button--small" href="${prefix()}login.html">تسجيل الدخول</a><a class="button button--primary button--small" href="${prefix()}register.html">إنشاء حساب</a><button class="mobile-nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" aria-controls="public-nav" data-public-nav-toggle>☰</button></div></div></header>`;
+  }
+
+  function initPublicHeader() {
+    const host = document.getElementById("publicHeader");
+    if (!host) return;
+    host.innerHTML = publicHeaderMarkup();
+    const toggle = host.querySelector("[data-public-nav-toggle]");
+    const nav = host.querySelector(".public-nav");
+    toggle?.addEventListener("click", () => {
+      const open = nav.classList.toggle("is-open");
+      toggle.setAttribute("aria-expanded", String(open));
+    });
+    nav?.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => {
+      nav.classList.remove("is-open");
+      toggle?.setAttribute("aria-expanded", "false");
+    }));
+  }
+
   function initNavigation() {
     const host = document.getElementById("dashboardSidebar");
     if (!host) return;
@@ -66,5 +90,5 @@
     backdrop?.addEventListener("click", () => setOpen(false));
   }
 
-  window.MOWAKAL_NAV = { initNavigation, sidebarMarkup };
+  window.MOWAKAL_NAV = { initNavigation, initPublicHeader, sidebarMarkup, publicHeaderMarkup };
 })();

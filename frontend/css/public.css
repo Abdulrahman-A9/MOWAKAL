@@ -1,9 +1,11 @@
 .public-header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 20;
   border-bottom: 1px solid rgba(228, 230, 226, 0.8);
   background: rgba(247, 247, 245, 0.94);
   backdrop-filter: blur(12px);
+  box-shadow: 0 5px 18px rgba(12, 32, 52, 0.04);
 }
 
 .public-header__inner {
@@ -72,6 +74,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.public-header__actions .button {
+  white-space: nowrap;
 }
 
 .mobile-nav-toggle {
@@ -286,6 +292,83 @@
 .stat-strip__item span {
   color: var(--text-secondary);
   font-size: 0.88rem;
+}
+
+.section-heading--split {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: none;
+}
+
+.section-heading--split > div {
+  max-width: 640px;
+}
+
+.section-heading--split .text-link {
+  flex: 0 0 auto;
+  margin-bottom: 9px;
+}
+
+.service-category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.service-category-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 150px;
+  padding: 20px 17px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--motion), box-shadow var(--motion), transform var(--motion);
+}
+
+.service-category-card:hover {
+  border-color: var(--gold-500);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
+}
+
+.service-category-card__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  background: var(--gold-100);
+  color: var(--navy-900);
+  font-size: 1.1rem;
+}
+
+.service-category-card__copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.service-category-card__copy strong {
+  color: var(--navy-900);
+  font-size: 0.98rem;
+}
+
+.service-category-card__copy small {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.service-category-card__arrow {
+  margin-inline-start: auto;
+  color: var(--gold-500);
+  font-size: 1.15rem;
 }
 
 .feature-grid {

@@ -76,6 +76,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     window.MOWAKAL_NAV.initNavigation();
+    window.MOWAKAL_NAV.initPublicHeader();
     window.MOWAKAL_UI.bindUI();
     initPage();
     document.querySelectorAll("[data-year]").forEach((element) => { element.textContent = new Date().getFullYear(); });

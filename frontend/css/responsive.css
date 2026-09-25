@@ -1,0 +1,268 @@
+@media (max-width: 1080px) {
+  .hero__grid {
+    gap: 36px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lawyer-card-grid,
+  .case-grid,
+  .document-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .public-header__inner {
+    min-height: 70px;
+  }
+
+  .mobile-nav-toggle {
+    display: grid;
+  }
+
+  .public-nav {
+    position: absolute;
+    top: calc(100% + 1px);
+    right: 20px;
+    left: 20px;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .public-nav.is-open {
+    display: flex;
+  }
+
+  .public-nav__link {
+    width: 100%;
+  }
+
+  .public-header__actions .button--outline {
+    display: none;
+  }
+
+  .dashboard-layout {
+    display: block;
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(var(--sidebar-width), 86vw);
+    min-height: 100vh;
+    transform: translateX(105%);
+    transition: transform 220ms ease;
+    box-shadow: -16px 0 30px rgba(12, 32, 52, 0.18);
+  }
+
+  body.sidebar-open .dashboard-sidebar {
+    transform: translateX(0);
+  }
+
+  .sidebar-close {
+    display: grid;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: block;
+    background: rgba(12, 32, 52, 0.46);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  body.sidebar-open .sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .dashboard-mobilebar {
+    display: flex;
+  }
+
+  .calendar-layout,
+  .dashboard-grid,
+  .dashboard-grid--equal {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-aside {
+    min-height: auto;
+    padding: 32px 24px;
+  }
+
+  .auth-aside__content {
+    margin-top: 44px;
+  }
+
+  .auth-aside__content h1 {
+    font-size: 2.5rem;
+  }
+
+  .auth-aside__footer {
+    margin-top: 36px;
+  }
+}
+
+@media (max-width: 720px) {
+  .container {
+    width: min(var(--content-width), calc(100% - 28px));
+  }
+
+  .section {
+    padding-block: 52px;
+  }
+
+  .hero {
+    padding-top: 54px;
+  }
+
+  .hero__grid,
+  .trust-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .hero__content h1 {
+    font-size: 2.6rem;
+  }
+
+  .hero-panel {
+    padding: 22px;
+  }
+
+  .feature-grid,
+  .steps,
+  .lawyer-card-grid,
+  .case-grid,
+  .document-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trust-list {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-strip__item {
+    padding: 14px 18px;
+  }
+
+  .page-heading {
+    flex-direction: column;
+    margin-bottom: var(--space-6);
+  }
+
+  .page-heading__actions {
+    width: 100%;
+  }
+
+  .page-heading__actions .button {
+    flex: 1 1 auto;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid .field--full {
+    grid-column: auto;
+  }
+
+  .profile-header {
+    flex-wrap: wrap;
+  }
+
+  .profile-header__actions {
+    width: 100%;
+  }
+
+  .profile-header__actions .button {
+    flex: 1 1 auto;
+  }
+
+  .calendar-day {
+    min-height: 58px;
+    padding: 6px;
+  }
+
+  .calendar-day__event {
+    display: none;
+  }
+
+  .public-footer__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-header__actions .button--primary {
+    display: none;
+  }
+
+  .hero__actions .button {
+    width: 100%;
+  }
+
+  .hero-search__options {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card__value {
+    font-size: 1.55rem;
+  }
+
+  .auth-panel {
+    padding: 22px 14px;
+  }
+
+  .auth-card {
+    padding: 22px 18px;
+  }
+
+  .auth-form__row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tabs {
+    width: 100%;
+  }
+
+  .tab {
+    flex: 1 1 auto;
+  }
+}

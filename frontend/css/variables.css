@@ -1,0 +1,78 @@
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("../assets/fonts/thmanyahsans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("../assets/fonts/thmanyahsans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("../assets/fonts/thmanyahsans-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("../assets/fonts/thmanyahsans-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --navy-950: #0c2034;
+  --navy-900: #102a43;
+  --navy-800: #163a5f;
+  --navy-700: #25527a;
+  --gold-500: #c6a15b;
+  --gold-400: #d2b06a;
+  --gold-100: #f6edda;
+  --background: #f7f7f5;
+  --background-deep: #eff1ef;
+  --surface: #ffffff;
+  --surface-muted: #fbfbf9;
+  --border: #e4e6e2;
+  --border-strong: #d6d9d4;
+  --text-primary: #17202a;
+  --text-secondary: #6b7280;
+  --text-muted: #8b949e;
+  --success: #3f7d5b;
+  --success-soft: #e8f2ec;
+  --danger: #a64b4b;
+  --danger-soft: #f8eaea;
+  --warning: #c08a3e;
+  --warning-soft: #fff4df;
+  --info: #2e6f95;
+  --info-soft: #e9f3f8;
+  --shadow-sm: 0 2px 10px rgba(16, 42, 67, 0.05);
+  --shadow-md: 0 10px 26px rgba(16, 42, 67, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+  --content-width: 1180px;
+  --sidebar-width: 276px;
+  --motion: 180ms ease;
+  --font-sans: "Thmanyah Sans", "Segoe UI", Tahoma, Arial, sans-serif;
+}

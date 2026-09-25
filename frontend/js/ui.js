@@ -72,7 +72,7 @@
       if (event.target.classList.contains("modal-backdrop")) closeModal(event.target);
 
       const comingSoon = event.target.closest("[data-coming-soon]");
-      if (comingSoon) showToast("هذا القسم مُجهّز للمرحلة القادمة من المنصة.", "warning");
+      if (comingSoon) showToast("هذا القسم يتطلب تفعيل الصلاحية ضمن حسابك.", "warning");
     });
 
     document.addEventListener("keydown", (event) => {

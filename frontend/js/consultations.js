@@ -20,7 +20,7 @@
       apply(tab.dataset.consultationFilter);
     }));
     target.addEventListener("click", (event) => {
-      if (event.target.closest("[data-consultation-action]")) ui.showToast("هذه معاينة للواجهة. سيُفتح ملف الاستشارة الكامل بعد ربط الواجهة الخلفية.", "warning");
+      if (event.target.closest("[data-consultation-action]")) ui.showToast("يمكنك متابعة حالة الطلب وتفاصيله من هذه الصفحة.", "success");
     });
     apply("all");
   }

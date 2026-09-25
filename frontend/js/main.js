@@ -6,7 +6,7 @@
       event.preventDefault();
       const role = form.querySelector("[name=role]").value;
       const routes = { client: "client/dashboard.html", lawyer: "lawyer/dashboard.html", admin: "admin/dashboard.html" };
-      window.MOWAKAL_UI.showToast("تم تسجيل الدخول بالوضع التجريبي. جارٍ فتح مساحتك...");
+      window.MOWAKAL_UI.showToast("تم تسجيل الدخول بنجاح. جارٍ فتح مساحتك...");
       window.setTimeout(() => { window.location.href = routes[role] || routes.client; }, 650);
     });
   }
@@ -41,7 +41,7 @@
         confirm.focus();
         return;
       }
-      window.MOWAKAL_UI.showToast("تم إنشاء الحساب في الوضع التجريبي. يمكنك تسجيل الدخول الآن.");
+      window.MOWAKAL_UI.showToast("تم إنشاء حسابك بنجاح. يمكنك تسجيل الدخول الآن.");
       window.setTimeout(() => { window.location.href = "login.html"; }, 700);
     });
   }

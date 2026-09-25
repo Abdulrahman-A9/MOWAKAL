@@ -47,7 +47,7 @@
           ["⌂", "لوحة التحكم", `${prefix}client/dashboard.html`, "client-dashboard"],
           ["⌕", "العثور على محامٍ", `${prefix}client/lawyers.html`, "lawyers"],
           ["◫", "الاستشارات", `${prefix}client/consultations.html`, "consultations"],
-          ["✉", "الرسائل", "", "", "قريبًا"]
+          ["✉", "الرسائل", "", "", "يتطلب صلاحية"]
         ]
       },
       lawyer: {
@@ -59,7 +59,7 @@
           ["♙", "العملاء", `${prefix}lawyer/clients.html`, "clients"],
           ["▤", "المستندات", `${prefix}lawyer/documents.html`, "documents"],
           ["◷", "التقويم", `${prefix}lawyer/calendar.html`, "calendar"],
-          ["◌", "الفوترة", "", "", "قريبًا"]
+          ["◌", "الفوترة", "", "", "يتطلب صلاحية"]
         ]
       },
       admin: {
@@ -67,10 +67,10 @@
         user: ["مشرف MOWAKAL", "مدير النظام"],
         items: [
           ["⌂", "لوحة التحكم", `${prefix}admin/dashboard.html`, "admin-dashboard"],
-          ["♙", "المستخدمون", "", "", "قريبًا"],
+          ["♙", "المستخدمون", "", "", "يتطلب صلاحية"],
           ["✓", "توثيق المحامين", `${prefix}admin/dashboard.html#verifications`, "admin-dashboard"],
           ["◌", "نشاط المنصة", `${prefix}admin/dashboard.html#activity`, "admin-dashboard"],
-          ["▤", "التقارير", "", "", "قريبًا"]
+          ["▤", "التقارير", "", "", "يتطلب صلاحية"]
         ]
       }
     };

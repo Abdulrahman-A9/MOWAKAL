@@ -1,124 +1,20 @@
 (function () {
-  function getPrefix() {
-    return document.body.dataset.pathPrefix || "";
-  }
-
-  function publicHeader() {
-    const host = document.getElementById("publicHeader");
-    if (!host) return;
-    const prefix = getPrefix();
-    const current = document.body.dataset.page || "";
-    host.innerHTML = `
-      <header class="public-header">
-        <div class="container public-header__inner">
-          <a class="brand" href="${prefix}index.html" aria-label="العودة إلى الصفحة الرئيسية">
-            <span class="brand__mark" aria-hidden="true">م</span>
-            <span class="brand__copy">MOWAKAL<small>منصة الخدمات القانونية</small></span>
-          </a>
-          <button class="mobile-nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" data-public-nav-toggle>☰</button>
-          <nav class="public-nav" aria-label="التنقل الرئيسي" data-public-nav>
-            <a class="public-nav__link ${current === "home" ? "is-active" : ""}" href="${prefix}index.html">الرئيسية</a>
-            <a class="public-nav__link ${current === "lawyers" ? "is-active" : ""}" href="${prefix}client/lawyers.html">العثور على محامٍ</a>
-            <a class="public-nav__link" href="${prefix}index.html#how-it-works">كيف تعمل المنصة؟</a>
-          </nav>
-          <div class="public-header__actions">
-            <a class="button button--outline button--small" href="${prefix}login.html">تسجيل الدخول</a>
-            <a class="button button--primary button--small" href="${prefix}register.html">إنشاء حساب</a>
-          </div>
-        </div>
-      </header>`;
-
-    const toggle = host.querySelector("[data-public-nav-toggle]");
-    const nav = host.querySelector("[data-public-nav]");
-    toggle?.addEventListener("click", () => {
-      const open = nav.classList.toggle("is-open");
-      toggle.setAttribute("aria-expanded", String(open));
-      toggle.textContent = open ? "×" : "☰";
-    });
-  }
-
+  function prefix() { return document.body.dataset.pathPrefix || ""; }
+  const configs = {
+    client: { label: "مساحة العميل", user: ["سلمان العبدالله", "عميل"], items: [["⌂", "الرئيسية", "client/dashboard.html", "client-dashboard"], ["▣", "الخدمات القانونية", "client/services.html", "client-services"], ["♙", "المحامون", "client/lawyers.html", "lawyers"], ["＋", "طلباتي", "client/requests.html", "client-requests"], ["◌", "استشاراتي", "client/consultations.html", "client-consultations"], ["▤", "قضاياي", "client/cases.html", "client-cases"], ["◷", "المواعيد", "client/appointments.html", "client-appointments"], ["□", "المستندات", "client/documents.html", "client-documents"], ["✉", "الرسائل", "client/messages.html", "client-messages"], ["ر", "المدفوعات", "client/payments.html", "client-payments"], ["★", "التقييمات", "client/reviews.html", "client-reviews"], ["⚙", "الملف الشخصي", "client/profile.html", "client-profile"]] },
+    lawyer: { label: "مساحة المحامي", user: ["د. نورة العتيبي", "محامية مرخصة"], items: [["⌂", "الرئيسية", "lawyer/dashboard.html", "lawyer-dashboard"], ["＋", "الطلبات الجديدة", "lawyer/requests.html", "lawyer-requests"], ["◌", "الاستشارات", "lawyer/consultations.html", "lawyer-consultations"], ["▤", "القضايا", "lawyer/cases.html", "lawyer-cases"], ["♙", "العملاء", "lawyer/clients.html", "lawyer-clients"], ["□", "المستندات", "lawyer/documents.html", "lawyer-documents"], ["◷", "المواعيد", "lawyer/calendar.html", "lawyer-calendar"], ["✉", "الرسائل", "lawyer/messages.html", "lawyer-messages"], ["ر", "الأتعاب والفواتير", "lawyer/billing.html", "lawyer-billing"], ["★", "التقييمات", "lawyer/reviews.html", "lawyer-reviews"], ["⚙", "الملف المهني", "lawyer/profile.html", "lawyer-profile"]] },
+    admin: { label: "إدارة المنصة", user: ["مشرف MOWAKAL", "مدير النظام"], items: [["⌂", "الرئيسية", "admin/dashboard.html", "admin-dashboard"], ["♙", "المستخدمون", "admin/users.html", "admin-users"], ["●", "العملاء", "admin/clients.html", "admin-clients"], ["♙", "المحامون", "admin/lawyers.html", "admin-lawyers"], ["✓", "توثيق المحامين", "admin/lawyer-verifications.html", "admin-verifications"], ["▣", "الخدمات القانونية", "admin/services.html", "admin-services"], ["＋", "الطلبات", "admin/requests.html", "admin-requests"], ["◌", "الاستشارات", "admin/consultations.html", "admin-consultations"], ["▤", "القضايا", "admin/cases.html", "admin-cases"], ["□", "المستندات", "admin/documents.html", "admin-documents"], ["ر", "المدفوعات", "admin/payments.html", "admin-payments"], ["★", "التقييمات", "admin/reviews.html", "admin-reviews"], ["↗", "سجل الأنشطة", "admin/activity.html", "admin-activity"], ["▥", "التقارير", "admin/reports.html", "admin-reports"], ["⚙", "الإعدادات", "admin/settings.html", "admin-settings"]] }
+  };
   function sidebarMarkup(role) {
-    const prefix = getPrefix();
-    const groups = {
-      client: {
-        label: "مساحة العميل",
-        user: ["سلمان العبدالله", "عميل"],
-        items: [
-          ["⌂", "لوحة التحكم", `${prefix}client/dashboard.html`, "client-dashboard"],
-          ["⌕", "العثور على محامٍ", `${prefix}client/lawyers.html`, "lawyers"],
-          ["◫", "الاستشارات", `${prefix}client/consultations.html`, "consultations"],
-          ["✉", "الرسائل", "", "", "يتطلب صلاحية"]
-        ]
-      },
-      lawyer: {
-        label: "مساحة المحامي",
-        user: ["د. نورة العتيبي", "محامية مرخصة"],
-        items: [
-          ["⌂", "لوحة التحكم", `${prefix}lawyer/dashboard.html`, "lawyer-dashboard"],
-          ["▣", "القضايا", `${prefix}lawyer/cases.html`, "cases"],
-          ["♙", "العملاء", `${prefix}lawyer/clients.html`, "clients"],
-          ["▤", "المستندات", `${prefix}lawyer/documents.html`, "documents"],
-          ["◷", "التقويم", `${prefix}lawyer/calendar.html`, "calendar"],
-          ["◌", "الفوترة", "", "", "يتطلب صلاحية"]
-        ]
-      },
-      admin: {
-        label: "إدارة المنصة",
-        user: ["مشرف MOWAKAL", "مدير النظام"],
-        items: [
-          ["⌂", "لوحة التحكم", `${prefix}admin/dashboard.html`, "admin-dashboard"],
-          ["♙", "المستخدمون", "", "", "يتطلب صلاحية"],
-          ["✓", "توثيق المحامين", `${prefix}admin/dashboard.html#verifications`, "admin-dashboard"],
-          ["◌", "نشاط المنصة", `${prefix}admin/dashboard.html#activity`, "admin-dashboard"],
-          ["▤", "التقارير", "", "", "يتطلب صلاحية"]
-        ]
-      }
-    };
-    const config = groups[role] || groups.client;
-    const current = document.body.dataset.page || "";
-    const items = config.items.map(([icon, label, href, page, soon]) => {
-      if (!href) {
-        return `<button class="sidebar-link sidebar-link--disabled" type="button" data-coming-soon><span class="sidebar-link__label"><span class="icon" aria-hidden="true">${icon}</span>${label}</span><small>${soon}</small></button>`;
-      }
-      return `<a class="sidebar-link ${current === page ? "is-active" : ""}" href="${href}"><span class="sidebar-link__label"><span class="icon" aria-hidden="true">${icon}</span>${label}</span></a>`;
-    }).join("");
-
-    return `
-      <aside class="dashboard-sidebar" aria-label="القائمة الجانبية">
-        <button class="sidebar-close" type="button" aria-label="إغلاق القائمة" data-sidebar-close>×</button>
-        <a class="brand" href="${prefix}index.html" aria-label="MOWAKAL">
-          <span class="brand__mark" aria-hidden="true">م</span>
-          <span class="brand__copy">MOWAKAL<small>منصة الخدمات القانونية</small></span>
-        </a>
-        <span class="sidebar-label">${config.label}</span>
-        <nav class="sidebar-nav">${items}</nav>
-        <div class="sidebar-user">
-          <span class="avatar avatar--sm avatar--light" aria-hidden="true">${config.user[0].slice(0, 2)}</span>
-          <span class="sidebar-user__copy"><strong>${config.user[0]}</strong><span>${config.user[1]}</span></span>
-        </div>
-      </aside>`;
+    const config = configs[role] || configs.client; const current = document.body.dataset.appPage || document.body.dataset.page || "";
+    const links = config.items.map(([icon, label, href, page]) => `<a class="sidebar-link ${current === page ? "is-active" : ""}" href="${prefix()}${href}"><span class="sidebar-link__label"><span class="icon" aria-hidden="true">${icon}</span>${label}</span></a>`).join("");
+    return `<aside class="dashboard-sidebar" aria-label="القائمة الجانبية"><button class="sidebar-close" type="button" aria-label="إغلاق القائمة" data-sidebar-close>×</button><a class="brand" href="${prefix()}index.html" aria-label="العودة للرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy">MOWAKAL<small>منصة الخدمات القانونية</small></span></a><span class="sidebar-label">${config.label}</span><nav class="sidebar-nav">${links}</nav><div class="sidebar-user"><span class="avatar avatar--sm avatar--light" aria-hidden="true">${config.user[0].slice(0, 2)}</span><span class="sidebar-user__copy"><strong>${config.user[0]}</strong><span>${config.user[1]}</span></span></div></aside>`;
   }
-
-  function dashboardSidebar() {
-    const host = document.getElementById("dashboardSidebar");
-    if (!host) return;
-    host.innerHTML = sidebarMarkup(document.body.dataset.role);
-    const backdrop = document.querySelector("[data-sidebar-backdrop]");
-    const close = host.querySelector("[data-sidebar-close]");
-    const toggle = document.querySelector("[data-sidebar-toggle]");
-    const setOpen = (open) => {
-      document.body.classList.toggle("sidebar-open", open);
-      toggle?.setAttribute("aria-expanded", String(open));
-    };
-    toggle?.addEventListener("click", () => setOpen(true));
-    close?.addEventListener("click", () => setOpen(false));
-    backdrop?.addEventListener("click", () => setOpen(false));
-  }
-
   function initNavigation() {
-    publicHeader();
-    dashboardSidebar();
+    const host = document.getElementById("dashboardSidebar"); if (!host) return; host.innerHTML = sidebarMarkup(document.body.dataset.role);
+    const layout = document.querySelector(".dashboard-layout"); const backdrop = document.querySelector("[data-sidebar-backdrop]"); const close = host.querySelector("[data-sidebar-close]"); const toggle = document.querySelector("[data-sidebar-toggle]");
+    const setOpen = (value) => { document.body.classList.toggle("sidebar-open", value); layout?.classList.toggle("sidebar-open", value); backdrop?.classList.toggle("is-visible", value); toggle?.setAttribute("aria-expanded", String(value)); };
+    toggle?.addEventListener("click", () => setOpen(!layout?.classList.contains("sidebar-open"))); close?.addEventListener("click", () => setOpen(false)); backdrop?.addEventListener("click", () => setOpen(false));
   }
-
-  window.MOWAKAL_NAV = { initNavigation };
+  window.MOWAKAL_NAV = { initNavigation, sidebarMarkup };
 })();

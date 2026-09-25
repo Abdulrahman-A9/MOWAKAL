@@ -62,20 +62,16 @@
   }
 
   function initPage() {
+    if (document.body.dataset.appPage && window.MOWAKAL_PLATFORM) {
+      window.MOWAKAL_PLATFORM.init();
+      return;
+    }
     const page = document.body.dataset.page;
     if (page === "home") initHome();
     if (page === "login") initLogin();
     if (page === "register") initRegister();
     if (page === "lawyers") window.MOWAKAL_LAWYERS.initDirectory();
     if (page === "lawyer-profile") window.MOWAKAL_LAWYERS.initProfile();
-    if (page === "consultations") window.MOWAKAL_CONSULTATIONS.initConsultations();
-    if (page === "client-dashboard") window.MOWAKAL_DASHBOARD.renderClientDashboard();
-    if (page === "lawyer-dashboard") window.MOWAKAL_DASHBOARD.renderLawyerDashboard();
-    if (page === "cases") window.MOWAKAL_DASHBOARD.renderCases();
-    if (page === "clients") window.MOWAKAL_DASHBOARD.renderClients();
-    if (page === "documents") window.MOWAKAL_DASHBOARD.renderDocuments();
-    if (page === "calendar") window.MOWAKAL_DASHBOARD.renderCalendar();
-    if (page === "admin-dashboard") window.MOWAKAL_DASHBOARD.renderAdminDashboard();
   }
 
   document.addEventListener("DOMContentLoaded", () => {

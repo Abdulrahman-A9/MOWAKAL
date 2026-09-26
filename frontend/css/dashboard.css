@@ -24,7 +24,21 @@
   color: #fff;
 }
 
+.dashboard-sidebar .brand__copy {
+  min-width: 0;
+}
+
+.dashboard-sidebar .brand__copy strong {
+  display: block;
+  color: #fff;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
 .dashboard-sidebar .brand__copy small {
+  color: rgba(255, 255, 255, 0.58);
+}
   color: rgba(255, 255, 255, 0.58);
 }
 

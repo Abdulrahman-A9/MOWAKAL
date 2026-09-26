@@ -41,6 +41,12 @@
   line-height: 1.05;
 }
 
+.brand__copy strong {
+  display: block;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
 .brand__copy small {
   margin-top: 5px;
   color: var(--text-secondary);

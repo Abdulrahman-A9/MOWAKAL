@@ -1,4 +1,8 @@
 .dashboard-grid--main { grid-template-columns: minmax(0, 1.4fr) minmax(300px, .6fr); }
+.directory-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.directory-summary strong, .directory-summary span { display: block; }
+.directory-summary strong { color: var(--navy-900); font-size: 1.08rem; }
+.directory-summary span { margin-top: 3px; color: var(--text-secondary); font-size: .84rem; }
 .stat-card--info::before { background: var(--info); }
 .stat-card--success::before { background: var(--success); }
 .stat-card--warning::before { background: var(--warning); }

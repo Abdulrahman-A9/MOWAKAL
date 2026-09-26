@@ -39,6 +39,30 @@
   const set = (html) => { root().innerHTML = html; };
   const wrap = (title, text, body, action) => set(dashboardHeader() + heading(title, text, action) + body);
 
+  function usersPage() {
+    wrap("المستخدمون", "إدارة جميع حسابات المنصة من مساحة واحدة.", '<section class="card card--padded"><div class="directory-summary"><div><strong data-user-count>٥ مستخدمين</strong><span>استخدم التبويبات والبحث للوصول إلى الفئة المطلوبة.</span></div></div>' + tabs([["all", "كل المستخدمين"], ["client", "العملاء"], ["lawyer", "المحامون"], ["admin", "مديرو المنصة"]]) + toolbar('<select class="filter-select" data-user-status><option value="">كل الحالات</option><option value="نشط">نشط</option><option value="موقوف">موقوف</option></select>') + '<div class="data-table-wrap"><table class="data-table"><thead><tr><th>المستخدم</th><th>الدور</th><th>البريد الإلكتروني</th><th>الحالة</th><th>تاريخ التسجيل</th></tr></thead><tbody data-users-table></tbody></table></div></section>');
+    const target = document.querySelector("[data-users-table]");
+    const search = document.querySelector("[data-search]");
+    const status = document.querySelector("[data-user-status]");
+    const count = document.querySelector("[data-user-count]");
+    const filterButtons = document.querySelectorAll("[data-filter]");
+    let roleFilter = "all";
+    const roleKey = (role) => role === "عميل" ? "client" : role === "محامٍ" ? "lawyer" : "admin";
+    const draw = () => {
+      const query = search.value.trim().toLowerCase();
+      const list = d.users.filter((item) => {
+        const searchable = [item.name, item.email, item.id, item.role].join(" ").toLowerCase();
+        return (roleFilter === "all" || roleKey(item.role) === roleFilter) && (!status.value || item.status === status.value) && (!query || searchable.includes(query));
+      });
+      count.textContent = list.length + " مستخدمين";
+      target.innerHTML = list.length ? list.map((item) => '<tr><td>' + person(item.name, item.id, item.name.slice(0, 2)) + '</td><td>' + e(item.role) + '</td><td>' + e(item.email) + '</td><td>' + e(item.status) + '</td><td>' + e(item.registeredAt) + '</td></tr>').join("") : '<tr><td colspan="5">' + empty("لا توجد نتائج", "جرّب تغيير الفلتر أو عبارة البحث.") + '</td></tr>';
+    };
+    filterButtons.forEach((buttonEl) => buttonEl.addEventListener("click", () => { filterButtons.forEach((item) => item.classList.remove("is-active")); buttonEl.classList.add("is-active"); roleFilter = buttonEl.dataset.filter; draw(); }));
+    search.addEventListener("input", draw);
+    status.addEventListener("change", draw);
+    draw();
+  }
+
   function dashboard(role) {
     const area = role === "lawyer" ? "lawyer" : role === "admin" ? "admin" : "client";
     const title = role === "lawyer" ? "لوحة المحامي" : role === "admin" ? "لوحة إدارة المنصة" : "لوحة العميل";
@@ -93,5 +117,12 @@
   function reports() { wrap("التقارير", "ملخصات تشغيلية قابلة للربط لاحقًا بمصادر البيانات الفعلية.", '<div class="report-grid"><article class="card card--padded"><h2>أداء الطلبات</h2><p>توزيع الطلبات حسب الحالة خلال الشهر الحالي.</p><div class="report-bars"><span style="width:82%"><b>مكتملة</b><i>٣٤٪</i></span><span style="width:64%"><b>قيد التنفيذ</b><i>٢٨٪</i></span><span style="width:42%"><b>قيد المراجعة</b><i>١٨٪</i></span></div></article><article class="card card--padded"><h2>رضا العملاء</h2><p>متوسط التقييمات المنشورة.</p><strong class="report-number">٤٫٨ / ٥</strong><div class="review-stars">★★★★★</div></article><article class="card card--padded"><h2>التوثيق المهني</h2><p>طلبات مكتملة البيانات.</p><strong class="report-number">٨٦٪</strong></article></div>'); }
   function settings() { wrap("الإعدادات", "إعدادات عامة قابلة للتوسعة مع ربط لوحة الإدارة بالباكند.", '<section class="card card--padded"><form data-settings><div class="form-grid"><label>اسم المنصة<input value="MOWAKAL" required></label><label>البريد الإداري<input type="email" value="admin@mowakal.sa" required></label><label>المنطقة الزمنية<select><option>Asia/Riyadh</option></select></label><label>لغة الواجهة<select><option>العربية</option></select></label></div><label class="check-row"><input type="checkbox" checked> تفعيل إشعارات مراجعة التوثيق</label><label class="check-row"><input type="checkbox" checked> تسجيل الأحداث الإدارية</label><div class="form-actions"><button class="button button--primary\">حفظ الإعدادات</button></div></form></section>'); document.querySelector("[data-settings]").addEventListener("submit", (event) => { event.preventDefault(); ui.showToast("تم حفظ إعدادات المنصة.", "success"); }); }
   function init() { const page = document.body.dataset.appPage; if (!page) return; const map = { "client-dashboard": () => dashboard("client"), "client-services": services, "client-requests": () => requestsPage("client"), "client-request-details": () => requestDetails("client"), "client-new-request": wizard, "client-consultations": consultations, "client-cases": () => casesPage("client"), "client-case-details": () => caseDetails("client"), "client-appointments": () => { wrap("المواعيد", "نظّم مواعيدك القادمة وتابع الاجتماعات السابقة.", '<section class="card card--padded">' + header("قائمة المواعيد", "المواعيد المرتبطة بطلباتك.") + d.appointments.map((item) => '<div class="appointment-item"><span class="appointment-item__date">' + e(item.date) + '<strong>' + e(item.time) + '</strong></span><div><strong>' + e(item.title) + '</strong><span>' + e(lawyerName(item.lawyerId)) + '</span></div>' + ui.statusBadge(item.status) + '</div>').join("") + '</section>'); }, "client-documents": () => listPage("documents"), "client-messages": () => messages("client"), "client-payments": () => listPage("payments"), "client-reviews": () => admin("reviews"), "client-profile": () => profile("client"), "lawyer-dashboard": () => dashboard("lawyer"), "lawyer-requests": () => requestsPage("lawyer"), "lawyer-request-details": () => requestDetails("lawyer"), "lawyer-consultations": consultations, "lawyer-cases": () => casesPage("lawyer"), "lawyer-case-details": () => caseDetails("lawyer"), "lawyer-clients": () => listPage("clients"), "lawyer-client-details": clientDetails, "lawyer-documents": () => listPage("documents"), "lawyer-calendar": calendar, "lawyer-messages": () => messages("lawyer"), "lawyer-billing": billing, "lawyer-reviews": () => admin("reviews"), "lawyer-profile": () => profile("lawyer"), "admin-dashboard": () => dashboard("admin"), "admin-users": () => admin("users"), "admin-clients": () => admin("clients"), "admin-lawyers": () => admin("lawyers"), "admin-verifications": verifications, "admin-verification-details": verificationDetails, "admin-services": adminServices, "admin-requests": () => requestsPage("admin"), "admin-request-details": () => requestDetails("admin"), "admin-consultations": () => admin("consultations"), "admin-cases": () => admin("cases"), "admin-documents": () => admin("documents"), "admin-payments": () => admin("payments"), "admin-reviews": () => admin("reviews"), "admin-activity": () => admin("activity"), "admin-reports": reports, "admin-settings": settings }; (map[page] || (() => wrap("الصفحة غير متاحة", "تعذر فتح الصفحة المطلوبة.", '<section class="card card--padded">' + empty("الصفحة غير متاحة") + '</section>')))(); }
-  window.MOWAKAL_PLATFORM = { init };
+  const initPlatform = () => {
+    if (document.body.dataset.appPage === "admin-users") {
+      usersPage();
+      return;
+    }
+    init();
+  };
+  window.MOWAKAL_PLATFORM = { init: initPlatform };
 })();

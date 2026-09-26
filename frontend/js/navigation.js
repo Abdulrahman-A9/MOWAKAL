@@ -27,9 +27,9 @@
       user: ["مشرف MOWAKAL", "مدير النظام"],
       groups: [
         { label: "الرئيسية", items: [["⌂", "لوحة التحكم", "admin/dashboard.html", "admin-dashboard"]] },
-        { label: "المستخدمون", items: [["♙", "المستخدمون", "admin/users.html", "admin-users"], ["✓", "توثيق المحامين", "admin/lawyer-verifications.html", "admin-verifications"]] },
-        { label: "التشغيل", items: [["▣", "الخدمات القانونية", "admin/services.html", "admin-services"], ["＋", "الطلبات", "admin/requests.html", "admin-requests"], ["◌", "الاستشارات", "admin/consultations.html", "admin-consultations"], ["▤", "القضايا", "admin/cases.html", "admin-cases"], ["□", "المستندات", "admin/documents.html", "admin-documents"], ["ر", "المدفوعات", "admin/payments.html", "admin-payments"]] },
-        { label: "المراجعة والتقارير", items: [["★", "التقييمات", "admin/reviews.html", "admin-reviews"], ["↗", "سجل الأنشطة", "admin/activity.html", "admin-activity"], ["▥", "التقارير", "admin/reports.html", "admin-reports"]] },
+        { label: "المستخدمون", items: [["♙", "المستخدمون", "admin/users.html", "admin-users"]] },
+        { label: "التشغيل", items: [["▣", "الخدمات القانونية", "admin/services.html", "admin-services"]] },
+        { label: "المراجعة والتقارير", items: [["↗", "سجل التدقيق", "admin/activity.html", "admin-activity"], ["▥", "التقارير المجمّعة", "admin/reports.html", "admin-reports"]] },
         { label: "النظام", items: [["⚙", "الإعدادات", "admin/settings.html", "admin-settings"]] }
       ]
     }

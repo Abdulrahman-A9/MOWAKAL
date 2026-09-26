@@ -102,3 +102,41 @@ window.MOWAKAL_DATA = {
     { id: "USR-005", name: "مشرف MOWAKAL", email: "admin@mowakal.sa", role: "مدير النظام", status: "نشط", registeredAt: "١ أغسطس ٢٠٢٦" }
   ]
 };
+
+(function () {
+  const data = window.MOWAKAL_DATA;
+  const storageKey = "mowakal.lawyer-profiles.v1";
+  const editableFields = ["name", "initials", "email", "phone", "specialty", "city", "experience", "license", "price", "availability", "bio", "services"];
+
+  function readProfiles() {
+    try {
+      const profiles = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+      return profiles && typeof profiles === "object" && !Array.isArray(profiles) ? profiles : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  const savedProfiles = readProfiles();
+  data.lawyers.forEach((lawyer) => {
+    const saved = savedProfiles[lawyer.id];
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
+    editableFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(saved, field)) lawyer[field] = field === "services" && Array.isArray(saved[field]) ? saved[field].slice() : saved[field];
+    });
+  });
+
+  data.saveLawyerProfile = function (lawyerId, profile) {
+    const lawyer = data.lawyers.find((entry) => entry.id === lawyerId);
+    if (!lawyer) throw new Error("لم يتم العثور على ملف المحامي.");
+    const next = {};
+    editableFields.forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(profile, field)) next[field] = field === "services" && Array.isArray(profile[field]) ? profile[field].slice() : profile[field];
+    });
+    const profiles = readProfiles();
+    profiles[lawyerId] = { ...profiles[lawyerId], ...next };
+    window.localStorage.setItem(storageKey, JSON.stringify(profiles));
+    Object.assign(lawyer, next);
+    return lawyer;
+  };
+})();

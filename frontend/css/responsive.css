@@ -157,6 +157,18 @@
     margin-bottom: 0;
   }
 
+  .public-request-page {
+    padding-top: 24px;
+  }
+
+  .public-request-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .public-request-actions .button {
+    flex: 1 1 auto;
+  }
+
   .hero__content h1 {
     font-size: 2.6rem;
   }

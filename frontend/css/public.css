@@ -377,6 +377,162 @@
   font-size: 1.15rem;
 }
 
+.public-request-page {
+  min-height: 72vh;
+  padding-top: 34px;
+  background: var(--background);
+}
+
+.public-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 28px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.public-breadcrumb a:hover {
+  color: var(--navy-900);
+}
+
+.public-breadcrumb [aria-current="page"] {
+  color: var(--navy-900);
+  font-weight: 700;
+}
+
+.public-request-heading {
+  max-width: 760px;
+  margin: 0 auto 28px;
+  text-align: center;
+}
+
+.public-request-heading .eyebrow {
+  justify-content: center;
+}
+
+.public-request-heading h1 {
+  margin-bottom: 10px;
+  font-size: clamp(1.9rem, 4vw, 2.8rem);
+}
+
+.public-request-heading p,
+.public-request-step-note {
+  color: var(--text-secondary);
+}
+
+.public-request-heading p {
+  margin: 0;
+}
+
+.public-request-card {
+  max-width: 1000px;
+  margin-inline: auto;
+  padding: clamp(18px, 3vw, 32px);
+}
+
+.public-request-step-note {
+  margin: 0 0 16px;
+  font-size: 0.92rem;
+}
+
+.public-request-description {
+  margin-top: 16px;
+}
+
+.public-request-description textarea {
+  min-height: 140px;
+}
+
+.public-request-actions {
+  justify-content: flex-start;
+}
+
+.public-request-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.public-request-summary__row {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.public-request-summary__row span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.public-request-summary__row strong {
+  overflow-wrap: anywhere;
+  color: var(--navy-900);
+  font-size: 0.9rem;
+}
+
+.public-request-footnote {
+  margin: 18px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.public-request-success {
+  display: grid;
+  justify-items: center;
+  padding: clamp(20px, 5vw, 48px) 12px;
+  text-align: center;
+}
+
+.public-request-success[hidden] {
+  display: none;
+}
+
+.public-request-success__icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.public-request-success .eyebrow {
+  margin-bottom: 8px;
+}
+
+.public-request-success h2 {
+  margin-bottom: 8px;
+}
+
+.public-request-success p {
+  max-width: 520px;
+  color: var(--text-secondary);
+}
+
+.public-request-success__summary {
+  width: min(720px, 100%);
+  margin: 4px 0 22px;
+  text-align: right;
+}
+
+.public-request-success__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

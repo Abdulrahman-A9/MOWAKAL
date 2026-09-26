@@ -68,6 +68,7 @@
     }
     const page = document.body.dataset.page;
     if (page === "home") initHome();
+    if (page === "service-request") window.MOWAKAL_PUBLIC_REQUEST.init();
     if (page === "login") initLogin();
     if (page === "register") initRegister();
     if (page === "lawyers") window.MOWAKAL_LAWYERS.initDirectory();

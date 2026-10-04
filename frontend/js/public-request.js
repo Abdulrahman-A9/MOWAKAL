@@ -22,6 +22,13 @@
   function init() {
     const form = document.querySelector("[data-public-request]");
     if (!form) return;
+    const api = window.MOWAKAL_API;
+    if (api.enabled && (!api.hasToken || api.user?.role !== "client")) {
+      const host = document.querySelector("[data-request-steps]");
+      form.hidden = true;
+      host.insertAdjacentHTML("afterend", '<section class="card card--padded"><h2>سجّل الدخول لإرسال طلبك</h2><p>تُحفظ تفاصيل الطلب في حساب العميل، ولا نجمع وقائع قانونية قبل تسجيل الدخول.</p><a class="button button--primary" href="login.html">تسجيل الدخول</a></section>');
+      return;
+    }
     const progress = document.querySelector("[data-request-progress]");
     const stepHost = document.querySelector("[data-request-steps]");
     const next = document.querySelector("[data-request-next]");
@@ -31,6 +38,20 @@
     let currentStep = 0;
     progress.innerHTML = steps.map((label, index) => '<span class="' + (index === 0 ? "is-active" : "") + '" data-progress-step="' + index + '"' + (index === 0 ? ' aria-current="step"' : "") + '>' + (index + 1) + ". " + label + '</span>').join("");
     stepHost.innerHTML = stepMarkup(selectedService);
+    if (api.enabled) {
+      for (const name of ["name", "email", "phone"]) {
+        const field = form.elements[name];
+        field.value = api.user?.[name] || "";
+        field.readOnly = true;
+        if (name === "phone") field.required = false;
+      }
+      const upload = form.querySelector("[data-request-files]");
+      upload.disabled = true;
+      upload.closest("label").replaceWith(Object.assign(document.createElement("p"), { className: "field-help", textContent: "رفع الملفات غير متاح حاليًا. لا تختَر مستندات حساسة قبل تفعيل التخزين الآمن." }));
+      form.querySelectorAll('[name="date"], [name="time"], [name="method"]').forEach((field) => { field.closest("label").hidden = true; });
+      form.querySelector('[data-step="3"] h2').textContent = "المحامي المفضل";
+      form.querySelector('[data-step="3"] p').textContent = "اختر محاميًا من الدليل أو اترك الاختيار للمنصة. تحديد موعد الاستشارة يتم لاحقًا بعد قبول الطلب.";
+    }
     const panels = [...stepHost.querySelectorAll("[data-step]")];
 
     const selectedServiceName = (serviceId) => data.services.find((item) => item.id === serviceId)?.name || "—";
@@ -50,8 +71,7 @@
         summaryRow("المدينة", values.get("city")),
         summaryRow("وصف الطلب", values.get("description")),
         summaryRow("المحامي المفضل", selectedLawyerName(values.get("lawyer"))),
-        summaryRow("طريقة التواصل", values.get("method")),
-        summaryRow("التاريخ والوقت", [values.get("date"), values.get("time")].filter(Boolean).join(" · "))
+        ...(api.enabled ? [] : [summaryRow("طريقة التواصل", values.get("method")), summaryRow("التاريخ والوقت", [values.get("date"), values.get("time")].filter(Boolean).join(" · "))])
       ].join("");
     }
 
@@ -63,7 +83,7 @@
         else item.removeAttribute("aria-current");
       });
       back.hidden = currentStep === 0;
-      next.textContent = currentStep === panels.length - 1 ? "عرض ملخص الطلب" : "التالي";
+      next.textContent = currentStep === panels.length - 1 ? (api.enabled ? "إرسال الطلب" : "عرض ملخص الطلب") : "التالي";
       if (currentStep === panels.length - 1) renderSummary();
       panels[currentStep].querySelector("h2")?.focus({ preventScroll: true });
     }
@@ -76,7 +96,7 @@
       success.innerHTML = '<span class="public-request-success__icon" aria-hidden="true">✓</span><span class="eyebrow">اكتملت مراجعة التفاصيل</span><h2>ملخص طلبك جاهز</h2><p>راجع المعلومات التي أدخلتها في الملخص أدناه قبل إكمال تواصلك بشأن الخدمة.</p><div class="public-request-summary public-request-success__summary">' + summary + '</div><div class="public-request-success__actions"><a class="button button--primary" href="index.html">العودة للرئيسية</a><a class="button button--outline" href="client/lawyers.html">استعراض المحامين</a></div>';
     }
 
-    next.addEventListener("click", () => {
+    next.addEventListener("click", async () => {
       if (currentStep < panels.length - 1) {
         const invalid = [...panels[currentStep].querySelectorAll("[required]")].find((field) => !field.checkValidity());
         if (invalid) {
@@ -88,14 +108,23 @@
         render();
         return;
       }
-      showSuccess();
+      if (!api.enabled) { showSuccess(); return; }
+      const values = new FormData(form);
+      next.disabled = true;
+      try {
+        const result = await api.request("/api/requests", { method: "POST", authenticated: true, body: { serviceId: values.get("service"), title: values.get("title"), description: values.get("description"), urgency: values.get("urgency"), city: values.get("city"), lawyerId: values.get("lawyer") || null } });
+        form.hidden = true;
+        progress.hidden = true;
+        success.hidden = false;
+        success.innerHTML = '<h2>تم إرسال الطلب</h2><p>رقم طلبك: ' + escape(result.requestId) + '</p><a class="button button--primary" href="client/request-details.html?id=' + encodeURIComponent(result.requestId) + '">متابعة الطلب</a>';
+      } catch (error) { ui.showToast(error.message, "danger"); next.disabled = false; }
     });
     back.addEventListener("click", () => {
       if (currentStep === 0) return;
       currentStep -= 1;
       render();
     });
-    form.querySelector("[data-request-files]").addEventListener("change", (event) => {
+    form.querySelector("[data-request-files]")?.addEventListener("change", (event) => {
       form.querySelector("[data-request-file-names]").innerHTML = [...event.target.files].map((file) => '<span class="badge badge--neutral">' + escape(file.name) + '</span>').join("");
     });
     render();

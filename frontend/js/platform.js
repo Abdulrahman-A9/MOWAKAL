@@ -1,6 +1,8 @@
 ﻿(function () {
   const d = window.MOWAKAL_DATA;
   const ui = window.MOWAKAL_UI;
+  const live = () => Boolean(window.MOWAKAL_API?.enabled);
+  const api = () => window.MOWAKAL_API;
   const e = ui.escapeHtml;
   const pre = () => document.body.dataset.pathPrefix || "../";
   const href = (value) => pre() + value;
@@ -26,7 +28,8 @@
   };
   const dashboardHeader = () => {
     const meta = roleMeta[document.body.dataset.role] || roleMeta.client;
-    return '<header class="dashboard-topbar"><div class="topbar-context"><span class="topbar-breadcrumb">MOWAKAL <b>/</b> ' + e(meta.label) + '</span><strong>مساحة العمل</strong></div><div class="topbar-actions"><label class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="ابحث في مساحة العمل" aria-label="بحث عام"></label><button class="topbar-icon" type="button" aria-label="الإشعارات">◔<span class="topbar-icon__dot"></span></button><a class="topbar-user" href="' + href(meta.profile) + '" aria-label="فتح الملف الشخصي">' + avatar(meta.user.slice(0, 2)) + '<span><strong>' + e(meta.user) + '</strong><small>' + e(meta.role) + '</small></span><span class="topbar-user__chevron" aria-hidden="true">⌄</span></a></div></header>';
+    const name = live() ? api().user?.name || meta.user : meta.user;
+    return '<header class="dashboard-topbar"><div class="topbar-context"><span class="topbar-breadcrumb">MOWAKAL <b>/</b> ' + e(meta.label) + '</span><strong>مساحة العمل</strong></div><div class="topbar-actions"><label class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="ابحث في مساحة العمل" aria-label="بحث عام"></label><a class="topbar-user" href="' + href(meta.profile) + '" aria-label="فتح الملف الشخصي">' + avatar(name.slice(0, 2)) + '<span><strong>' + e(name) + '</strong><small>' + e(meta.role) + '</small></span><span class="topbar-user__chevron" aria-hidden="true">⌄</span></a></div></header>';
   };
   const heading = (title, text, action) => '<div class="page-heading"><div><span class="eyebrow">مساحة العمل</span><h1>' + e(title) + '</h1><p>' + e(text) + '</p></div><div class="page-heading__actions">' + (action || "") + '</div></div>';
   const button = (text, path, cls) => path ? '<a class="' + (cls || "button button--primary") + '" href="' + path + '">' + e(text) + '</a>' : '<button class="' + (cls || "button button--primary") + '" type="button">' + e(text) + '</button>';
@@ -66,12 +69,12 @@
   function adminDashboard() {
     const lawyerCount = d.users.filter((item) => item.role === "محامٍ").length;
     const activeServices = d.services.filter((item) => item.active).length;
-    const overview = stats([["حسابات المنصة", String(d.users.length), "معرّفات وأدوار فقط", "gold"], ["المحامون", String(lawyerCount), "عدد إجمالي", "success"], ["الخدمات المتاحة", String(activeServices), "كتالوج عام", "info"], ["أحداث التدقيق", String(d.activities.length), "بيانات تشغيلية مختصرة", "warning"]]);
+    const overview = stats([["حسابات المنصة", String(live() ? d.adminStats.totalUsers : d.users.length), "معرّفات وأدوار فقط", "gold"], ["المحامون الموثقون", String(live() ? d.adminStats.verifiedLawyers : lawyerCount), "عدد إجمالي", "success"], ["الخدمات المتاحة", String(activeServices), "كتالوج عام", "info"], ["أحداث التدقيق", String(d.activities.length), "آخر ١٠٠ حدث", "warning"]]);
     const actions = '<section class="card card--padded"><div class="card-header"><div><h2>إجراءات المنصة</h2><p>إدارة الجوانب العامة من دون فتح محتوى علاقة المحامي بالعميل.</p></div></div><div class="quick-actions">' +
       '<a class="quick-action" href="' + href("admin/users.html") + '"><span>إدارة الحسابات الأساسية</span><span>←</span></a>' +
       '<a class="quick-action" href="' + href("admin/services.html") + '"><span>إدارة الخدمات</span><span>←</span></a>' +
       '<a class="quick-action" href="' + href("admin/reports.html") + '"><span>عرض التقارير المجمّعة</span><span>←</span></a></div></section>';
-    const privacyNote = '<section class="card card--padded"><div class="card-header"><div><h2>نطاق لوحة الإدارة</h2><p>لا تعرض هذه المساحة الرسائل أو تفاصيل القضايا أو المستندات أو بيانات الدفع الشخصية.</p></div><span class="badge badge--success">بيانات محدودة</span></div><p class="field-help">هذه واجهة ثابتة بلا مصادقة أو خادم؛ لا تربط بها بيانات مستخدمين حقيقية قبل تطبيق الصلاحيات في الـ API.</p></section>';
+    const privacyNote = '<section class="card card--padded"><div class="card-header"><div><h2>نطاق لوحة الإدارة</h2><p>لا تعرض هذه المساحة الرسائل أو تفاصيل القضايا أو المستندات أو بيانات الدفع الشخصية.</p></div><span class="badge badge--success">بيانات محدودة</span></div><p class="field-help">' + (live() ? 'تُفرض الصلاحيات وقيود الخصوصية من الخادم.' : 'هذه واجهة ثابتة بلا مصادقة أو خادم؛ لا تربط بها بيانات مستخدمين حقيقية قبل تطبيق الصلاحيات في الـ API.') + '</p></section>';
     wrap("لوحة إدارة المنصة", "مؤشرات عامة ومجمّعة لإدارة إعدادات المنصة وخدماتها.", overview + '<div class="dashboard-grid dashboard-grid--equal">' + actions + privacyNote + '</div>');
   }
 
@@ -82,9 +85,9 @@
     const text = role === "lawyer" ? "اعرف ما يحتاج انتباهك وأدر ملفات عملائك بكفاءة." : role === "admin" ? "تابع مؤشرات التشغيل والطلبات التي تحتاج مراجعة إدارية." : "تابع طلباتك وخطواتك القانونية من مكان واحد.";
     const quick = role === "client" ? [["طلب خدمة جديدة", "client/new-request.html"], ["الخدمات القانونية", "client/services.html"], ["المستندات", "client/documents.html"], ["القضايا", "client/cases.html"]] : role === "lawyer" ? [["مراجعة الطلبات", "lawyer/requests.html"], ["إضافة قضية", "lawyer/cases.html"], ["العملاء", "lawyer/clients.html"], ["فتح التقويم", "lawyer/calendar.html"]] : [["توثيق المحامين", "admin/lawyer-verifications.html"], ["إدارة الطلبات", "admin/requests.html"], ["المستخدمون", "admin/users.html"], ["التقارير", "admin/reports.html"]];
     const requests = d.requests.slice(0, 3).map((item) => '<a class="request-list__item" href="' + pageLink(area, "request-details.html", item.id) + '"><div><strong>' + e(item.title) + '</strong><span>' + e(role === "client" ? lawyerName(item.lawyerId) : clientName(item.clientId)) + ' · ' + e(serviceName(item.serviceId)) + '</span></div>' + ui.statusBadge(item.status) + '</a>').join("");
-    const activities = d.activities.slice(0, 5).map((item) => '<li class="activity-item"><span class="activity-dot activity-dot--info">•</span><div class="activity-item__body"><strong>' + e(item.event) + '</strong><span>' + e(item.actor) + ' · ' + e(item.timestamp) + '</span></div></li>').join("");
+    const activities = live() ? '<li class="activity-item">تظهر تحديثات طلباتك في صفحة الطلبات.</li>' : d.activities.slice(0, 5).map((item) => '<li class="activity-item"><span class="activity-dot activity-dot--info">•</span><div class="activity-item__body"><strong>' + e(item.event) + '</strong><span>' + e(item.actor) + ' · ' + e(item.timestamp) + '</span></div></li>').join("");
     wrap(title, text, '<div class="dashboard-grid dashboard-grid--main"><div class="dashboard-stack"><section class="card card--padded">' + header(role === "admin" ? "طلبات تحتاج مراجعة" : role === "lawyer" ? "طلبات تحتاج قرارًا" : "آخر الطلبات", "أهم الملفات التي تحتاج متابعتك.", button("عرض الكل", href(area + "/requests.html"), "button button--ghost button--small")) + '<div class="request-list">' + requests + '</div></section><section class="card card--padded">' + header("المواعيد القادمة", "الاجتماعات والتسليمات القريبة.") + '<div class="appointment-list">' + d.appointments.slice(0, 3).map((item) => '<div class="appointment-item"><span class="appointment-item__date">' + e(item.date.slice(5).replace("-", "/")) + '<strong>' + e(item.time) + '</strong></span><div><strong>' + e(item.title) + '</strong><span>' + e(role === "client" ? lawyerName(item.lawyerId) : clientName(item.clientId)) + '</span></div>' + ui.statusBadge(item.status) + '</div>').join("") + '</div></section></div><div class="dashboard-stack"><section class="card card--padded">' + header("إجراءات سريعة", "اختصر خطوات العمل اليومية.") + '<div class="quick-actions">' + quick.map((item) => '<a class="quick-action" href="' + href(item[1]) + '"><span>' + e(item[0]) + '</span><span>←</span></a>').join("") + '</div></section><section class="card card--padded">' + header("آخر الأنشطة", "سجل مختصر للحركة الأخيرة.") + '<ul class="activity-list">' + activities + '</ul></section></div></div>');
-    root().querySelector(".page-heading").insertAdjacentHTML("afterend", stats(role === "client" ? [["الطلبات النشطة", "٣", "تحتاج متابعة", "gold"], ["الاستشارات القادمة", "٢", "هذا الأسبوع", "info"], ["القضايا النشطة", "٢", "تحت الإجراء", "success"], ["المدفوعات المعلقة", "١", "تحتاج مراجعة", "warning"]] : role === "lawyer" ? [["طلبات جديدة", "٢", "تحتاج قرارًا", "warning"], ["القضايا النشطة", "٢", "قيد المتابعة", "success"], ["الاستشارات القادمة", "٢", "هذا الأسبوع", "info"], ["إجمالي الأعمال", "٧", "ملفات نشطة ومغلقة", "gold"]] : [["إجمالي المستخدمين", "١٬٢٤٨", "هذا الشهر", "gold"], ["المحامون", "١٨٦", "١٤٢ موثقًا", "success"], ["طلبات التوثيق", "١٢", "تحتاج مراجعة", "warning"], ["الطلبات النشطة", "٨٧", "قيد المعالجة", "info"]]));
+    root().querySelector(".page-heading").insertAdjacentHTML("afterend", stats(live() ? [["إجمالي الطلبات", String(d.requests.length), "المرتبطة بحسابك", "gold"], ["طلبات قيد الإجراء", String(d.requests.filter((item) => !["completed", "rejected"].includes(item.status)).length), "تحتاج متابعة", "info"], ["المواعيد", String(d.appointments.length), "المرتبطة بطلباتك", "success"]] : role === "client" ? [["الطلبات النشطة", "٣", "تحتاج متابعة", "gold"], ["الاستشارات القادمة", "٢", "هذا الأسبوع", "info"], ["القضايا النشطة", "٢", "تحت الإجراء", "success"], ["المدفوعات المعلقة", "١", "تحتاج مراجعة", "warning"]] : [["طلبات جديدة", "٢", "تحتاج قرارًا", "warning"], ["القضايا النشطة", "٢", "قيد المتابعة", "success"], ["الاستشارات القادمة", "٢", "هذا الأسبوع", "info"], ["إجمالي الأعمال", "٧", "ملفات نشطة ومغلقة", "gold"]]));
   }
 
   function services() {
@@ -104,11 +107,13 @@
 
   function requestDetails(role) {
     const item = request(qp("id", "REQ-1001")); if (!item) { wrap("الطلب غير موجود", "تعذر العثور على الطلب المطلوب.", '<section class="card card--padded">' + empty("لم يتم العثور على الطلب", "تحقق من الرقم ثم حاول مرة أخرى.") + '</section>'); return; }
-    const area = role === "lawyer" ? "lawyer" : role === "admin" ? "admin" : "client"; const action = role === "lawyer" ? '<button class="button button--primary" data-request-action="accepted">قبول الطلب</button><button class="button button--outline" data-request-action="under_review">طلب معلومات إضافية</button><button class="button button--danger" data-request-action="rejected">رفض الطلب</button>' : button("مراسلة الطرف المرتبط", href(area + "/messages.html"), "button button--primary");
+    const area = role === "lawyer" ? "lawyer" : role === "admin" ? "admin" : "client";
+    const actions = live() ? { waiting_lawyer: [["accepted", "قبول الطلب"], ["under_review", "طلب معلومات إضافية"], ["rejected", "رفض الطلب"]], under_review: [["accepted", "قبول الطلب"], ["rejected", "رفض الطلب"]], accepted: [["in_progress", "بدء التنفيذ"]], in_progress: [["completed", "إكمال الطلب"]] }[item.status] || [] : [["accepted", "قبول الطلب"], ["under_review", "طلب معلومات إضافية"], ["rejected", "رفض الطلب"]];
+    const action = role === "lawyer" ? actions.map(([status, label]) => '<button class="button button--outline" data-request-action="' + status + '">' + label + '</button>').join("") : item.lawyerId ? button("مراسلة الطرف المرتبط", href(area + "/messages.html"), "button button--primary") : "";
     wrap("تفاصيل الطلب", item.id + " · " + item.title, "ملخص الطلب والمستندات والمسار التشغيلي.", action);
-    const stepNames = { created: "تم إنشاء الطلب", submitted: "تم إرسال الطلب", reviewed: "تمت مراجعة البيانات", assigned: "تم تعيين المحامي", accepted: "تم قبول الطلب", in_progress: "بدأ تنفيذ الخدمة", completed: "تم إغلاق الطلب" }; const current = item.timeline[item.timeline.length - 1];
+    const stepNames = { created: "تم إنشاء الطلب", submitted: "تم إرسال الطلب", waiting_lawyer: "بانتظار قرار المحامي", under_review: "بانتظار معلومات إضافية", reviewed: "تمت مراجعة البيانات", assigned: "تم تعيين المحامي", accepted: "تم قبول الطلب", in_progress: "بدأ تنفيذ الخدمة", completed: "تم إغلاق الطلب", rejected: "لم يُقبل الطلب" }; const current = item.timeline[item.timeline.length - 1];
     root().insertAdjacentHTML("beforeend", '<div class="detail-layout"><div class="detail-main"><section class="card card--padded">' + header("ملخص الطلب", "المعلومات الأساسية المقدمة عند إنشاء الطلب.") + info([["الخدمة", serviceName(item.serviceId)], ["العنوان", item.title], ["الوصف", item.description], ["الأولوية", item.urgency], ["المدينة", item.city], ["تاريخ الإنشاء", item.createdAt], ["الحالة", ui.statusBadge(item.status), true]]) + '</section><section class="card card--padded">' + header("المستندات", "بيانات المستندات المرتبطة بالطلب.") + (item.documentIds.length ? item.documentIds.map((docId) => { const doc = find(d.documents, docId); return '<div class="mini-list__item"><span>□</span><div><strong>' + e(doc?.name) + '</strong><small>' + e(doc?.type) + ' · ' + e(doc?.status) + '</small></div></div>'; }).join("") : empty("لا توجد مستندات")) + '</section></div><aside class="detail-side"><section class="card card--padded">' + header("مسار الطلب", "التحديثات الرئيسية منذ الإرسال.") + '<ol class="timeline">' + item.timeline.map((step, index) => '<li class="timeline__item ' + (step === current ? "is-current" : "is-complete") + '"><span class="timeline__marker">' + (step === current ? index + 1 : "✓") + '</span><div><strong>' + e(stepNames[step]) + '</strong><span>' + (step === current ? "المرحلة الحالية" : "اكتملت") + '</span></div></li>').join("") + '</ol></section><section class="card card--padded">' + header(role === "client" ? "المحامي المعين" : "العميل", "الطرف المرتبط بالطلب.") + person(role === "client" ? lawyerName(item.lawyerId) : clientName(item.clientId), role === "client" ? "محامٍ مرخص" : "صاحب الطلب", role === "client" ? lawyer(item.lawyerId)?.initials : client(item.clientId)?.initials) + '</section></aside></div>');
-    root().addEventListener("click", (event) => { const actionEl = event.target.closest("[data-request-action]"); if (!actionEl) return; item.status = actionEl.dataset.requestAction; ui.showToast("تم تحديث حالة الطلب بنجاح.", item.status === "rejected" ? "danger" : "success"); });
+    root().addEventListener("click", async (event) => { const actionEl = event.target.closest("[data-request-action]"); if (!actionEl) return; actionEl.disabled = true; try { if (live()) { const result = await api().request("/api/requests/" + encodeURIComponent(item.id) + "/status", { method: "PATCH", authenticated: true, body: { status: actionEl.dataset.requestAction } }); item.status = result.requestStatus; } else item.status = actionEl.dataset.requestAction; ui.showToast("تم تحديث حالة الطلب بنجاح.", item.status === "rejected" ? "danger" : "success"); if (live()) location.reload(); } catch (error) { ui.showToast(error.message, "danger"); } finally { actionEl.disabled = false; } });
   }
 
   function consultations() { wrap("الاستشارات", "إدارة الجلسات ومواعيد التواصل مع المحامين.", '<section class="card card--padded">' + tabs([["all", "الكل"], ["pending", "بانتظار الموافقة"], ["scheduled", "مجدولة"], ["completed", "مكتملة"]]) + '<div class="consultation-grid" data-consultation-grid></div></section>'); const target = document.querySelector("[data-consultation-grid]"), buttons = document.querySelectorAll("[data-filter]"); let selected = "all"; const draw = () => { const list = d.consultations.filter((item) => selected === "all" || item.status === selected); target.innerHTML = list.length ? list.map((item) => '<article class="card consultation-card"><div class="consultation-card__top">' + person(lawyerName(item.lawyerId), item.subject, lawyer(item.lawyerId)?.initials) + ui.statusBadge(item.status) + '</div><div class="consultation-card__meta\"><span>' + e(item.id) + '</span><span>' + e(item.date) + ' · ' + e(item.time) + '</span><span>' + e(item.method) + '</span></div><button class="button button--ghost button--small\" data-follow>متابعة</button></article>').join("") : empty("لا توجد استشارات", "ستظهر الجلسات هنا عند توفرها."); }; buttons.forEach((item) => item.addEventListener("click", () => { buttons.forEach((buttonEl) => buttonEl.classList.remove("is-active")); item.classList.add("is-active"); selected = item.dataset.filter; draw(); })); target.addEventListener("click", (event) => { if (event.target.closest("[data-follow]")) ui.showToast("تم تسجيل متابعة الاستشارة.", "success"); }); draw(); }
@@ -117,13 +122,41 @@
   function caseDetails(role) { const item = caseFile(qp("id", "CASE-2001")); if (!item) { wrap("القضية غير موجودة", "تعذر العثور على الملف.", '<section class="card card--padded">' + empty("لم يتم العثور على القضية") + '</section>'); return; } wrap("تفاصيل القضية", item.id + " · " + item.title, "ملخص الملف والمواعيد والمستندات والتحديثات.", button("العودة للقضايا", href((role === "lawyer" ? "lawyer" : "client") + "/cases.html"), "button button--outline")); const docs = d.documents.filter((doc) => doc.caseId === item.id); root().insertAdjacentHTML("beforeend", '<div class="detail-layout"><div class="detail-main"><section class="card card--padded">' + header("ملخص القضية", "البيانات الأساسية للملف.") + info([["رقم القضية", item.id], ["العنوان", item.title], ["النوع", item.type], ["الحالة", ui.statusBadge(item.status), true], ["المرحلة الحالية", item.stage], [role === "client" ? "المحامي" : "العميل", role === "client" ? lawyerName(item.lawyerId) : clientName(item.clientId)], ["الموعد القادم", item.nextEvent]]) + '</section><section class="card card--padded">' + header("الملاحظات والتحديثات", "سجل مختصر للعمل المنجز.") + (item.notes.length ? item.notes.map((note) => '<div class="mini-list__item"><span>✓</span><div><strong>' + e(note) + '</strong><small>تم تسجيله ضمن ملاحظات القضية</small></div></div>').join("") : empty("لا توجد ملاحظات")) + '</section></div><aside class="detail-side"><section class="card card--padded">' + header("المستندات", "بيانات المستندات المرتبطة بالقضية.") + (docs.length ? docs.map((doc) => '<div class="mini-list__item"><span>□</span><div><strong>' + e(doc.name) + '</strong><small>' + e(doc.type) + ' · ' + e(doc.status) + '</small></div></div>').join("") : empty("لا توجد مستندات")) + '</section></aside></div>'); }
 
   function listPage(type) { const data = type === "documents" ? d.documents : type === "payments" ? d.payments : d.clients; const labels = type === "documents" ? ["المستند", "الارتباط", "النوع", "الرفع", "الحالة"] : type === "payments" ? ["الفاتورة", "العميل", "المحامي", "المبلغ", "الحالة", "الاستحقاق"] : ["العميل", "المدينة", "الطلبات", "القضايا", "الحالة"]; const rows = type === "documents" ? data.map((item) => '<tr><td>' + person(item.name, item.id, "□") + '</td><td>' + e(item.requestId || item.caseId || "الملف الشخصي") + '</td><td>' + e(item.type) + '</td><td>' + e(item.uploadedAt) + '</td><td>' + e(item.status) + '</td></tr>').join("") : type === "payments" ? data.map((item) => '<tr><td>' + e(item.invoice) + '</td><td>' + e(clientName(item.clientId)) + '</td><td>' + e(lawyerName(item.lawyerId)) + '</td><td>' + e(item.amount) + '</td><td>' + ui.statusBadge(item.status) + '</td><td>' + e(item.dueDate) + '</td></tr>').join("") : data.map((item) => '<tr><td>' + person(item.name, item.email, item.initials) + '</td><td>' + e(item.city) + '</td><td>' + item.requests + '</td><td>' + item.cases + '</td><td>' + e(item.status === "active" ? "نشط" : "موقوف") + '</td></tr>').join(""); wrap(type === "documents" ? "المستندات" : type === "payments" ? "المدفوعات" : "العملاء", "عرض البيانات المرتبطة بمساحة العمل الحالية.", '<section class="card card--padded">' + toolbar() + '<div class="data-table-wrap"><table class="data-table\"><thead><tr>' + labels.map((item) => '<th>' + item + '</th>').join("") + '</tr></thead><tbody>' + rows + '</tbody></table></div></section>'); }
-  function messages(role) { wrap("الرسائل", "تواصل مع الأطراف المرتبطة بطلباتك داخل مساحة منظمة.", '<section class="message-layout card"><aside class="conversation-list"><div class="conversation-list__header"><h2>المحادثات</h2><span>' + d.messages.length + '</span></div><div data-conversations></div></aside><div class="conversation-panel" data-panel></div></section>'); const list = document.querySelector("[data-conversations]"), panel = document.querySelector("[data-panel]"); let active = d.messages[0]; const draw = () => { const pid = role === "client" ? active.lawyerId : active.clientId; const name = role === "client" ? lawyerName(pid) : clientName(pid); panel.innerHTML = '<div class="conversation-panel__header">' + person(name, active.subject, role === "client" ? lawyer(pid)?.initials : client(pid)?.initials) + '</div><div class="message-stream">' + active.messages.map((item) => '<div class="message-bubble ' + (item.from === role ? "is-mine" : "") + '"><p>' + e(item.text) + '</p><small>' + e(item.time) + '</small></div>').join("") + '</div><form class="message-compose"><input name="message" required placeholder="اكتب رسالتك هنا..."><button class="button button--primary">إرسال</button></form>'; panel.querySelector("form").addEventListener("submit", (event) => { event.preventDefault(); active.messages.push({ from: role, text: event.target.message.value, time: "الآن" }); draw(); ui.showToast("تمت إضافة الرسالة إلى المحادثة.", "success"); }); }; list.innerHTML = d.messages.map((item, index) => { const pid = role === "client" ? item.lawyerId : item.clientId; return '<button class="conversation-item ' + (index === 0 ? "is-active" : "") + '" type="button" data-conversation="' + item.id + '">' + avatar(role === "client" ? lawyer(pid)?.initials : client(pid)?.initials) + '<span><strong>' + e(role === "client" ? lawyerName(pid) : clientName(pid)) + '</strong><small>' + e(item.subject) + '</small></span></button>'; }).join(""); list.addEventListener("click", (event) => { const selected = event.target.closest("[data-conversation]"); if (!selected) return; active = find(d.messages, selected.dataset.conversation); list.querySelectorAll(".conversation-item").forEach((buttonEl) => buttonEl.classList.remove("is-active")); selected.classList.add("is-active"); draw(); }); draw(); }
+  function messages(role) {
+    wrap("الرسائل", "تواصل مع الأطراف المرتبطة بطلباتك داخل مساحة منظمة.", '<section class="message-layout card"><aside class="conversation-list"><div class="conversation-list__header"><h2>المحادثات</h2><span>' + d.messages.length + '</span></div><div data-conversations></div></aside><div class="conversation-panel" data-panel></div></section>');
+    const list = document.querySelector("[data-conversations]");
+    const panel = document.querySelector("[data-panel]");
+    let active = d.messages[0];
+    if (!active) { panel.innerHTML = empty("لا توجد محادثات", "تظهر المحادثات بعد ربط طلبك بمحامٍ."); return; }
+    const draw = () => {
+      const pid = role === "client" ? active.lawyerId : active.clientId;
+      const name = role === "client" ? lawyerName(pid) : clientName(pid);
+      panel.innerHTML = '<div class="conversation-panel__header">' + person(name, active.subject, role === "client" ? lawyer(pid)?.initials : client(pid)?.initials) + '</div><div class="message-stream">' + active.messages.map((item) => '<div class="message-bubble ' + (item.from === role ? "is-mine" : "") + '"><p>' + e(item.text) + '</p><small>' + e(item.time) + '</small></div>').join("") + '</div><form class="message-compose"><input name="message" required maxlength="4000" placeholder="اكتب رسالتك هنا..."><button class="button button--primary">إرسال</button></form>';
+      panel.querySelector("form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const content = form.elements.message.value.trim();
+        if (!content) return;
+        const submit = form.querySelector("button");
+        submit.disabled = true;
+        try {
+          const message = live() ? (await api().request("/api/messages", { method: "POST", authenticated: true, body: { requestId: active.id, content } })).message : { from: role, text: content, time: "الآن" };
+          active.messages.push(message);
+          draw();
+          ui.showToast("تم إرسال الرسالة.", "success");
+        } catch (error) { ui.showToast(error.message, "danger"); submit.disabled = false; }
+      });
+    };
+    list.innerHTML = d.messages.map((item, index) => { const pid = role === "client" ? item.lawyerId : item.clientId; return '<button class="conversation-item ' + (index === 0 ? "is-active" : "") + '" type="button" data-conversation="' + e(item.id) + '">' + avatar(role === "client" ? lawyer(pid)?.initials : client(pid)?.initials) + '<span><strong>' + e(role === "client" ? lawyerName(pid) : clientName(pid)) + '</strong><small>' + e(item.subject) + '</small></span></button>'; }).join("");
+    list.addEventListener("click", (event) => { const selected = event.target.closest("[data-conversation]"); if (!selected) return; active = find(d.messages, selected.dataset.conversation); list.querySelectorAll(".conversation-item").forEach((buttonEl) => buttonEl.classList.remove("is-active")); selected.classList.add("is-active"); draw(); });
+    draw();
+  }
   function lawyerProfile() {
     const item = d.lawyers[0];
     const cities = ["الرياض", "جدة", "مكة المكرمة", "المدينة المنورة", "الدمام", "الخبر", "الطائف", "تبوك", "أبها", "حائل", "جازان", "نجران", "القصيم"];
     const licenseNumber = String(item.license || "").replace(/^رخصة مهنية\s*/, "");
     const digits = (value) => String(value || "").replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
-    const fee = Number((digits(item.price).match(/\d+/) || [450])[0]);
+    const fee = Number(digits(item.price).replace(/[^0-9]/g, "")) || 0;
     const selectedCity = cities.includes(item.city) ? item.city : "الرياض";
     const cityOptions = [...new Set([selectedCity, ...cities])].map((city) => '<option value="' + e(city) + '" ' + (city === selectedCity ? "selected" : "") + '>' + e(city) + '</option>').join("");
     const areas = (item.services || []).join("، ");
@@ -132,7 +165,7 @@
       '<section class="card card--padded profile-form-section"><div class="card-header"><div><span class="eyebrow">بيانات تظهر للعملاء</span><h2>معلومات مهنية</h2><p>حدّث بيانات الترخيص والخبرة والتخصص وأتعاب الاستشارة.</p></div><span class="badge badge--success">ملف مهني</span></div>' +
       '<div class="form-grid"><label>الاسم المهني<input name="name" required maxlength="100" value="' + e(item.name) + '"></label><label>التخصص الرئيسي<input name="specialty" required maxlength="80" value="' + e(item.specialty) + '" placeholder="مثال: القضايا التجارية"></label><label>رقم الرخصة المهنية<input name="license" required maxlength="60" value="' + e(licenseNumber) + '"></label><label>سنوات الخبرة<input name="experience" type="number" min="0" max="60" required value="' + e(item.experience) + '"></label><label>المدينة<select name="city" required>' + cityOptions + '</select></label><label>أتعاب الاستشارة (ريال)<input name="fee" type="number" min="0" max="100000" step="1" required value="' + e(fee) + '"></label><label>المواعيد المتاحة<input name="availability" type="text" required maxlength="80" value="' + e(item.availability) + '" placeholder="متاح غدًا أو متاحة هذا الأسبوع"></label></div></section>' +
       '<section class="card card--padded profile-form-section"><div class="card-header"><div><span class="eyebrow">عرّف العملاء بخبرتك</span><h2>النبذة المهنية ومجالات الخدمة</h2><p>اكتب نبذة واضحة، وحدّد الأعمال القانونية التي تقدمها.</p></div></div><label>نبذة مهنية<textarea name="bio" required minlength="30" maxlength="700" rows="5" placeholder="اكتب نبذة تشرح خبرتك وطريقتك في مساعدة العملاء">' + e(item.bio) + '</textarea><small class="field-help">من ٣٠ إلى ٧٠٠ حرف. تجنّب إضافة بيانات سرية أو معلومات تخص عملاء سابقين.</small></label><label>مجالات الخدمة<textarea name="services" required rows="3" maxlength="500" placeholder="مثال: العقود التجارية، تأسيس الشركات، تسوية النزاعات">' + e(areas) + '</textarea><small class="field-help">افصل بين المجالات بفاصلة عربية أو سطر جديد؛ سيعرضها ملفك للعميل على شكل وسوم.</small></label></section>' +
-      '<section class="card card--padded profile-form-section"><div class="card-header"><div><span class="eyebrow">للتواصل وإدارة الحساب</span><h2>معلومات الحساب</h2><p>هذه البيانات تبقى ضمن إعدادات الحساب ولا تظهر في الملف العام.</p></div></div><div class="form-grid"><label>البريد الإلكتروني<input name="email" type="email" required maxlength="120" value="' + e(item.email || "noura@example.sa") + '"></label><label>رقم الجوال<input name="phone" type="tel" maxlength="20" value="' + e(item.phone || "0500000000") + '"></label></div></section>' +
+      '<section class="card card--padded profile-form-section"><div class="card-header"><div><span class="eyebrow">للتواصل وإدارة الحساب</span><h2>معلومات الحساب</h2><p>هذه البيانات تبقى ضمن إعدادات الحساب ولا تظهر في الملف العام.</p></div></div><div class="form-grid"><label>البريد الإلكتروني<input name="email" type="email" required maxlength="120" value="' + e(item.email || (live() ? "" : "noura@example.sa")) + '"></label><label>رقم الجوال<input name="phone" type="tel" maxlength="20" value="' + e(item.phone || (live() ? "" : "0500000000")) + '"></label></div></section>' +
       '<div class="profile-form-actions"><button class="button button--primary" type="submit">حفظ الملف المهني</button><a class="button button--outline" href="' + publicProfileUrl + '">عرض الملف العام</a><span role="status" aria-live="polite" data-profile-save-status></span></div></form>' +
       '<aside class="profile-live-preview"><section class="card card--padded"><div class="card-header"><div><span class="eyebrow">معاينة مباشرة</span><h2>كيف سيظهر ملفك؟</h2><p>تنعكس التعديلات على صفحتك العامة في هذا المتصفح بعد الحفظ.</p></div></div><div class="profile-preview-identity"><span class="avatar avatar--lg" data-preview-initials>' + e(item.initials) + '</span><div><strong data-preview-name>' + e(item.name) + '</strong><span data-preview-specialty>' + e(item.specialty) + '</span><small data-preview-city>' + e(item.city) + '</small></div></div><div class="profile-preview-block"><h3>نبذة مهنية</h3><p data-preview-bio>' + e(item.bio) + '</p></div><div class="profile-preview-block"><h3>مجالات الخدمة</h3><div class="chips" data-preview-services>' + (item.services || []).map((service) => '<span class="badge badge--neutral">' + e(service) + '</span>').join("") + '</div></div><div class="profile-preview-meta"><span>الخبرة<strong data-preview-experience>' + e(item.experience) + ' سنوات</strong></span><span>أتعاب الاستشارة<strong data-preview-fee>' + e(item.price) + '</strong></span></div><a class="profile-preview-link" href="' + publicProfileUrl + '">فتح صفحة المحامي ←</a></section><p class="profile-storage-note">تُحفظ البيانات في هذا المتصفح حاليًا. ربطها بحسابك على مختلف الأجهزة يتطلب تفعيل الخادم وقاعدة البيانات.</p></aside></div>';
     wrap("الملف المهني", "أكمل بياناتك ليتمكن العملاء من التعرف على خبرتك ومجالات عملك.", formMarkup, button("عرض ملفي للعميل", publicProfileUrl, "button button--outline button--small"));
@@ -197,7 +230,7 @@
   function profile(role) {
     if (role === "lawyer") { lawyerProfile(); return; }
     const item = d.clients[0];
-    wrap("الملف الشخصي", "راجع بيانات الحساب وحدث المعلومات الأساسية.", '<section class="card card--padded"><div class="profile-cover">' + avatar(item.initials) + '<div><h2>' + e(item.name) + '</h2><p>عميل MOWAKAL</p></div></div><form data-profile><div class="form-grid"><label>الاسم الكامل<input required value="' + e(item.name) + '"></label><label>البريد الإلكتروني<input type="email" required value="' + e(item.email || "salman@example.sa") + '"></label><label>رقم الجوال<input value="' + e(item.phone || "0500000000") + '"></label><label>المدينة<select><option>' + e(item.city || "الرياض") + '</option><option>جدة</option><option>الدمام</option></select></label></div><div class="form-actions"><button class="button button--primary">حفظ التغييرات</button></div></form></section>');
+    wrap("الملف الشخصي", "راجع بيانات الحساب وحدث المعلومات الأساسية.", '<section class="card card--padded"><div class="profile-cover">' + avatar(item.initials) + '<div><h2>' + e(item.name) + '</h2><p>عميل MOWAKAL</p></div></div><form data-profile><div class="form-grid"><label>الاسم الكامل<input required value="' + e(item.name) + '"></label><label>البريد الإلكتروني<input type="email" required value="' + e(item.email || (live() ? "" : "salman@example.sa")) + '"></label><label>رقم الجوال<input value="' + e(item.phone || (live() ? "" : "0500000000")) + '"></label><label>المدينة<select><option value="' + e(item.city || "") + '">' + e(item.city || (live() ? "اختر المدينة" : "الرياض")) + '</option><option>الرياض</option><option>جدة</option><option>الدمام</option></select></label></div><div class="form-actions"><button class="button button--primary">حفظ التغييرات</button></div></form></section>');
     document.querySelector("[data-profile]").addEventListener("submit", (event) => { event.preventDefault(); ui.showToast("تم حفظ بيانات الحساب بنجاح.", "success"); });
   }
   function clientDetails() { const item = client(qp("id", "CLI-001")); if (!item) { wrap("العميل غير موجود", "تعذر العثور على الملف.", '<section class="card card--padded">' + empty("لم يتم العثور على العميل") + '</section>'); return; } const requests = d.requests.filter((entry) => entry.clientId === item.id), cases = d.cases.filter((entry) => entry.clientId === item.id); wrap("ملف العميل", item.name, "ملخص آمن للطلبات والقضايا والمواعيد والبيانات المالية.", button("العودة للعملاء", href("lawyer/clients.html"), "button button--outline")); root().insertAdjacentHTML("beforeend", '<div class="detail-layout"><div class="detail-main"><section class="card card--padded">' + header("بيانات العميل", "البيانات اللازمة لإدارة العلاقة المهنية.") + info([["الاسم", item.name], ["البريد الإلكتروني", item.email], ["رقم الجوال", item.phone], ["المدينة", item.city], ["حالة الحساب", item.status === "active" ? "نشط" : "موقوف"]]) + '</section><section class="card card--padded">' + header("الطلبات", "الطلبات المرتبطة بهذا العميل.") + requests.map((entry) => '<a class="mini-list__item" href="' + pageLink("lawyer", "request-details.html", entry.id) + '"><span>＋</span><div><strong>' + e(entry.title) + '</strong><small>' + e(entry.id) + ' · ' + ui.statusBadge(entry.status) + '</small></div></a>').join("") + '</section></div><aside class="detail-side"><section class="card card--padded">' + header("القضايا", "ملفات العميل الحالية.") + cases.map((entry) => '<a class="mini-list__item" href="' + pageLink("lawyer", "case-details.html", entry.id) + '"><span>▤</span><div><strong>' + e(entry.title) + '</strong><small>' + ui.statusBadge(entry.status) + '</small></div></a>').join("") + '</section><section class="card card--padded">' + header("ملخص مالي", "معلومات للمتابعة فقط.") + '<div class="financial-summary financial-summary--inline"><div><span>الفواتير</span><strong>٢</strong></div><div><span>المدفوع</span><strong>١٬٠٥٠</strong></div></div></section></aside></div>'); }
@@ -219,7 +252,95 @@
   function restrictedAdminPage() {
     wrap("هذه الصفحة خارج لوحة الإدارة العامة", "محتوى المستخدمين والعلاقة المهنية لا يُعرض من هذه المساحة.", '<section class="card card--padded"><div class="empty-state"><span class="empty-state__icon" aria-hidden="true">◈</span><h2>المحتوى غير متاح هنا</h2><p>للحفاظ على الخصوصية، لا تعرض لوحة الإدارة العامة تفاصيل الطلبات أو القضايا أو الاستشارات أو المستندات أو المدفوعات أو التقييمات أو التوثيق.</p><p class="field-help">هذا تقييد للواجهة فقط؛ حماية البيانات الحقيقية تتطلب صلاحيات يفرضها الخادم.</p><a class="button button--primary" href="' + href("admin/dashboard.html") + '">العودة إلى لوحة الإدارة</a></div></section>');
   }
+  function enhanceLivePage() {
+    if (!live()) return;
+    const page = document.body.dataset.appPage;
+    const sidebarName = document.querySelector(".sidebar-user__copy strong");
+    if (sidebarName) sidebarName.textContent = api().user?.name || "";
+    if (page === "client-new-request") {
+      const form = document.querySelector("[data-wizard]");
+      const upload = form.querySelector("[data-files]");
+      upload.disabled = true;
+      upload.closest("label").replaceWith(Object.assign(document.createElement("p"), { className: "field-help", textContent: "رفع المستندات غير متاح حاليًا. لا تختَر ملفات حساسة قبل تفعيل التخزين الآمن." }));
+      form.querySelectorAll('[name="date"], [name="time"], [name="method"]').forEach((field) => field.closest("label").hidden = true);
+      form.querySelector('[data-step="3"] h2').textContent = "المحامي المفضل";
+      form.querySelector("[data-next]").addEventListener("click", () => { form.querySelectorAll("[data-summary] .detail-item").forEach((row) => { if (row.querySelector("span")?.textContent === "طريقة التواصل") row.remove(); }); });
+      form.querySelector("[data-next]").addEventListener("click", async (event) => {
+        if (!form.querySelector('[data-step="4"]').classList.contains("is-active")) return;
+        event.stopImmediatePropagation();
+        const buttonEl = event.currentTarget;
+        buttonEl.disabled = true;
+        const values = new FormData(form);
+        try {
+          const result = await api().request("/api/requests", { method: "POST", authenticated: true, body: { serviceId: values.get("service"), title: values.get("title"), description: values.get("description"), urgency: values.get("urgency"), city: values.get("city"), lawyerId: values.get("lawyer") || null } });
+          location.href = pageLink("client", "request-details.html", result.requestId);
+        } catch (error) { ui.showToast(error.message, "danger"); buttonEl.disabled = false; }
+      }, true);
+    }
+    if (page === "client-profile") {
+      const form = document.querySelector("[data-profile]");
+      const fields = form.querySelectorAll("input, select");
+      fields[1].readOnly = true;
+      form.addEventListener("submit", async (event) => {
+        event.stopImmediatePropagation(); event.preventDefault();
+        const submit = form.querySelector("button"); submit.disabled = true;
+        try { const result = await api().request("/api/me", { method: "PATCH", authenticated: true, body: { name: fields[0].value, phone: fields[2].value, city: fields[3].value } }); api().user = result.user; ui.showToast("تم حفظ بيانات الحساب.", "success"); }
+        catch (error) { ui.showToast(error.message, "danger"); }
+        finally { submit.disabled = false; }
+      }, true);
+    }
+    if (page === "lawyer-profile") {
+      const form = document.querySelector("[data-lawyer-profile-form]");
+      if (!api().user?.verified) {
+        document.querySelectorAll(".profile-preview-link, .profile-form-actions a, .page-heading__actions a").forEach((link) => { link.hidden = true; });
+        form.insertAdjacentHTML("afterbegin", '<p class="field-help">ملفك بانتظار التوثيق. لن يظهر للعملاء حتى تتم مراجعته.</p>');
+      }
+      form.elements.email.readOnly = true;
+      form.elements.phone.readOnly = true;
+      document.querySelector(".profile-storage-note").textContent = "تُحفظ التعديلات في حسابك. تغيير رقم الرخصة يعيد الملف للمراجعة قبل ظهوره للعملاء.";
+      form.addEventListener("submit", async (event) => {
+        event.stopImmediatePropagation(); event.preventDefault();
+        if (!form.reportValidity()) return;
+        const values = new FormData(form);
+        const services = [...new Set(String(values.get("services")).split(/[،,؛;\n]/).map((item) => item.trim()).filter(Boolean))];
+        const submit = form.querySelector('[type="submit"]'); submit.disabled = true;
+        try {
+          const result = await api().request("/api/me/lawyer-profile", { method: "PATCH", authenticated: true, body: { name: values.get("name"), specialty: values.get("specialty"), license: values.get("license"), experience: Number(values.get("experience")), city: values.get("city"), fee: Number(values.get("fee")), availability: values.get("availability"), bio: values.get("bio"), services } });
+          d.lawyers[0] = { ...result.lawyer, email: api().user.email, phone: api().user.phone };
+          form.querySelector("[data-profile-save-status]").textContent = result.lawyer.verified ? "تم حفظ الملف المهني." : "تم الحفظ، والملف بانتظار التوثيق.";
+          ui.showToast("تم حفظ الملف المهني.", "success");
+        } catch (error) { ui.showToast(error.message, "danger"); }
+        finally { submit.disabled = false; }
+      }, true);
+    }
+  }
   const initPlatform = () => {
+    if (live() && document.body.dataset.appPage === "lawyer-client-details") {
+      const item = client(qp("id", ""));
+      if (!item) { wrap("العميل غير متاح", "لا يمكن عرض إلا العملاء المرتبطين بطلباتك.", empty("لم يتم العثور على العميل")); return; }
+      const requests = d.requests.filter((entry) => entry.clientId === item.id);
+      wrap("ملف العميل", item.name, '<section class="card card--padded">' + info([["الاسم", item.name], ["البريد الإلكتروني", item.email], ["الجوال", item.phone || "—"], ["المدينة", item.city || "—"]]) + header("الطلبات المرتبطة", "تُعرض طلبات هذا العميل المسندة إليك فقط.") + (requests.length ? requests.map((entry) => '<a class="mini-list__item" href="' + pageLink("lawyer", "request-details.html", entry.id) + '">' + e(entry.title) + '</a>').join("") : empty("لا توجد طلبات")) + '</section>');
+      return;
+    }
+    if (live() && document.body.dataset.appPage === "admin-services") {
+      const draw = () => {
+        wrap("الخدمات القانونية", "إدارة إتاحة الخدمات في الكتالوج العام.", '<section class="card card--padded"><div class="data-table-wrap"><table class="data-table"><thead><tr><th>الخدمة</th><th>المجال</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>' + d.services.map((item) => '<tr><td>' + e(item.name) + '</td><td>' + e(item.category) + '</td><td>' + (item.active ? "متاحة" : "موقوفة") + '</td><td><button type="button" class="button button--outline button--small" data-service-id="' + e(item.id) + '">' + (item.active ? "إيقاف" : "تفعيل") + '</button></td></tr>').join("") + '</tbody></table></div></section>');
+        root().querySelectorAll("[data-service-id]").forEach((buttonEl) => buttonEl.addEventListener("click", async () => {
+          const item = d.services.find((entry) => entry.id === buttonEl.dataset.serviceId);
+          buttonEl.disabled = true;
+          try { await api().request("/api/admin/services/" + encodeURIComponent(item.id), { method: "PATCH", authenticated: true, body: { active: !item.active } }); item.active = !item.active; draw(); ui.showToast("تم تحديث الخدمة.", "success"); }
+          catch (error) { ui.showToast(error.message, "danger"); buttonEl.disabled = false; }
+        }));
+      };
+      draw(); return;
+    }
+    if (live() && document.body.dataset.appPage === "admin-reports") {
+      const counts = d.adminStats.requestCounts || {};
+      wrap("تقارير المنصة", "مؤشرات مجمعة دون محتوى الطلبات.", stats([["المستخدمون", String(d.adminStats.totalUsers), "حسابات المنصة", "gold"], ["المحامون الموثقون", String(d.adminStats.verifiedLawyers), "ملفات مهنية معتمدة", "success"], ["الطلبات النشطة", String(Object.entries(counts).filter(([status]) => !["completed", "rejected"].includes(status)).reduce((sum, [, total]) => sum + total, 0)), "دون تفاصيل شخصية", "info"]]));
+      return;
+    }
+    if (live() && document.body.dataset.appPage === "admin-settings") { wrap("الإعدادات", "تدار إعدادات الاتصال والصلاحيات من بيئة الخادم.", '<section class="card card--padded">' + empty("لا توجد إعدادات قابلة للتعديل هنا", "لا يُعرض نموذج حفظ صوري في الوضع المتصل.") + '</section>'); return; }
+    if (live() && new Set(["client-consultations", "client-cases", "client-case-details", "client-documents", "client-payments", "client-reviews", "lawyer-consultations", "lawyer-cases", "lawyer-case-details", "lawyer-documents", "lawyer-calendar", "lawyer-billing", "lawyer-reviews"]).has(document.body.dataset.appPage)) { wrap("الخدمة قيد التفعيل", "لا توجد بيانات أو إجراءات فعلية لهذه الصفحة بعد.", '<section class="card card--padded">' + empty("الخدمة غير متاحة حاليًا", "لن نعرض بيانات تجريبية ضمن حسابك.") + '</section>'); return; }
     if (document.body.dataset.role === "admin" && !adminReadablePages.has(document.body.dataset.appPage)) {
       restrictedAdminPage();
       return;
@@ -229,6 +350,7 @@
       return;
     }
     init();
+    enhanceLivePage();
   };
   window.MOWAKAL_PLATFORM = { init: initPlatform };
 })();

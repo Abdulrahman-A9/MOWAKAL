@@ -2,11 +2,47 @@
   const data = window.MOWAKAL_DATA;
   const ui = window.MOWAKAL_UI;
   const configUrl = new URL("../api-config.json", document.currentScript.src);
+  const tokenKey = "mowakal_token";
+  const userKey = "mowakal_user";
+  const localStore = (() => { try { return window.localStorage; } catch { return null; } })();
+  const tabStore = (() => { try { return window.sessionStorage; } catch { return null; } })();
+  const readStored = (store, key) => { try { return store?.getItem(key) || null; } catch { return null; } };
+  const removeStored = (store, key) => { try { store?.removeItem(key); } catch {} };
+  const getToken = () => readStored(localStore, tokenKey) || readStored(tabStore, tokenKey);
+  const readUser = (store) => {
+    try {
+      const value = store?.getItem(userKey);
+      return value ? JSON.parse(value) : null;
+    } catch { return null; }
+  };
+  const readCachedUser = () => readStored(localStore, tokenKey) ? readUser(localStore) : readStored(tabStore, tokenKey) ? readUser(tabStore) : null;
+  const clearAuth = () => {
+    [localStore, tabStore].forEach((store) => {
+      removeStored(store, tokenKey);
+      removeStored(store, userKey);
+    });
+  };
+  const saveAuth = (token, user, remember) => {
+    clearAuth();
+    const store = remember ? localStore : tabStore;
+    if (!store) throw new Error("تعذر حفظ جلسة الدخول على هذا الجهاز");
+    try {
+      store.setItem(tokenKey, token);
+      store.setItem(userKey, JSON.stringify(user));
+    } catch {
+      clearAuth();
+      throw new Error("تعذر حفظ جلسة الدخول على هذا الجهاز");
+    }
+  };
+  const saveUser = (user) => {
+    const store = readStored(localStore, tokenKey) ? localStore : tabStore;
+    try { store?.setItem(userKey, JSON.stringify(user)); } catch {}
+  };
   const api = {
     baseUrl: null,
-    user: null,
+    user: readCachedUser(),
     get enabled() { return this.baseUrl !== null; },
-    get hasToken() { return Boolean(sessionStorage.getItem("mowakal_token")); },
+    get hasToken() { return Boolean(getToken()); },
     async configure() {
       const response = await fetch(configUrl);
       if (!response.ok) throw new Error("تعذر تحميل إعدادات الاتصال");
@@ -16,7 +52,7 @@
     },
     async request(path, { method = "GET", body, authenticated = false } = {}) {
       if (!this.enabled) throw new Error("الخادم غير مفعّل");
-      const token = sessionStorage.getItem("mowakal_token");
+      const token = getToken();
       if (authenticated && !token) throw new Error("يلزم تسجيل الدخول");
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
@@ -29,8 +65,13 @@
         });
         const result = await response.json();
         if (!response.ok) {
-          if (response.status === 401 && authenticated) sessionStorage.removeItem("mowakal_token");
-          throw new Error(result.message || "تعذر إكمال الطلب");
+          if (response.status === 401 && authenticated) {
+            clearAuth();
+            this.user = null;
+          }
+          const error = new Error(result.message || "تعذر إكمال الطلب");
+          error.status = response.status;
+          throw error;
         }
         return result;
       } catch (error) {
@@ -49,6 +90,26 @@
   const statuses = { active: "نشط", suspended: "موقوف" };
   const routeFor = (role) => ({ client: "client/dashboard.html", lawyer: "lawyer/dashboard.html", admin: "admin/dashboard.html", verifier: "verifier/dashboard.html" }[role]);
   const appRoot = () => document.querySelector("[data-app-root]");
+  const updatePublicHeader = (user) => window.MOWAKAL_NAV?.updatePublicHeader(user);
+  const updateDashboardUser = (user) => window.MOWAKAL_NAV?.updateDashboardUser(user);
+  const syncPublicHeader = async () => {
+    const hasHeader = Boolean(document.getElementById("publicHeader"));
+    api.user = api.hasToken ? readCachedUser() : null;
+    if (hasHeader) updatePublicHeader(api.user);
+    if (!api.enabled || !api.hasToken) return;
+    try {
+      const result = await api.request("/api/me", { authenticated: true });
+      api.user = result.user;
+      saveUser(result.user);
+      if (hasHeader) updatePublicHeader(result.user);
+    } catch (error) {
+      if (error.status === 401) {
+        api.user = null;
+        clearAuth();
+        if (hasHeader) updatePublicHeader(null);
+      } else if (!hasHeader) api.user = null;
+    }
+  };
   const showLoadError = (message) => {
     const root = appRoot() || document.querySelector("main");
     if (root) root.innerHTML = '<section class="card card--padded"><h1>تعذر تحميل الصفحة</h1><p>' + ui.escapeHtml(message) + '</p><button class="button button--primary" type="button" data-retry-load>إعادة المحاولة</button></section>';
@@ -65,6 +126,8 @@
   const hydrate = async (role) => {
     const result = await api.request("/api/me", { authenticated: true });
     api.user = result.user;
+    saveUser(result.user);
+    updateDashboardUser(result.user);
     if (result.user.role !== role) throw new Error("هذا الحساب لا يملك صلاحية هذه المساحة");
     if (role === "admin") {
       const [users, services, activity, stats] = await Promise.all([
@@ -117,7 +180,7 @@
     button.dataset.logout = "";
     button.textContent = "تسجيل الخروج";
     button.addEventListener("click", () => {
-      sessionStorage.removeItem("mowakal_token");
+      clearAuth();
       api.user = null;
       window.location.href = "../login.html";
     });
@@ -127,6 +190,10 @@
   function initLogin() {
     const form = document.querySelector("[data-login-form]");
     if (!form) return;
+    if (api.hasToken && api.user) {
+      const destination = routeFor(api.user.role);
+      if (destination) { window.location.replace(destination); return; }
+    }
     if (api.enabled) form.querySelector("[name=role]")?.closest(".field")?.setAttribute("hidden", "");
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -140,9 +207,12 @@
       submit.disabled = true;
       try {
         const result = await api.request("/api/auth/login", { method: "POST", body: { email: form.elements.email.value, password: form.elements.password.value } });
+        if (typeof result.token !== "string" || !result.user) throw new Error("استجابة تسجيل الدخول غير مكتملة");
         const destination = routeFor(result.user.role);
         if (!destination) throw new Error("لا توجد مساحة مخصصة لهذا الدور بعد");
-        sessionStorage.setItem("mowakal_token", result.token);
+        saveAuth(result.token, result.user, form.elements.remember?.checked === true);
+        api.user = result.user;
+        updatePublicHeader(result.user);
         window.location.href = destination;
       } catch (error) {
         ui.showToast(error.message, "danger");
@@ -223,11 +293,13 @@
     const account = await api.request("/api/me", { authenticated: true });
     if (account.user.role !== "verifier") throw new Error("هذه المساحة مخصصة لمراجع التوثيق فقط");
     api.user = account.user;
+    saveUser(account.user);
+    updateDashboardUser(account.user);
     const root = appRoot();
     const draw = async () => {
       const result = await api.request("/api/verifications", { authenticated: true });
       root.innerHTML = '<div class="page-heading"><div><span class="eyebrow">مساحة مراجعة مستقلة</span><h1>توثيق المحامين</h1><p>راجع بيانات الترخيص المهنية فقط. لا تتضمن هذه الصفحة طلبات العملاء أو رسائلهم.</p></div><div class="page-heading__actions"><button type="button" class="button button--outline" data-verifier-logout>تسجيل الخروج</button></div></div><section class="card card--padded"><div class="data-table-wrap"><table class="data-table"><thead><tr><th>الاسم</th><th>رقم الترخيص</th><th>التخصص</th><th>المدينة</th><th>الخبرة</th><th>القرار</th></tr></thead><tbody>' + (result.verifications.length ? result.verifications.map((item) => '<tr><td>' + ui.escapeHtml(item.name) + '</td><td>' + ui.escapeHtml(item.license) + '</td><td>' + ui.escapeHtml(item.specialty) + '</td><td>' + ui.escapeHtml(item.city || "—") + '</td><td>' + ui.escapeHtml(item.experience) + '</td><td><button type="button" class="button button--primary button--small" data-verification-id="' + ui.escapeHtml(item.id) + '" data-decision="approved">اعتماد</button> <button type="button" class="button button--outline button--small" data-verification-id="' + ui.escapeHtml(item.id) + '" data-decision="rejected">رفض</button></td></tr>').join("") : '<tr><td colspan="6">لا توجد ملفات بانتظار المراجعة.</td></tr>') + '</tbody></table></div></section>';
-      root.querySelector("[data-verifier-logout]").addEventListener("click", () => { sessionStorage.removeItem("mowakal_token"); location.href = "../login.html"; });
+      root.querySelector("[data-verifier-logout]").addEventListener("click", () => { clearAuth(); location.href = "../login.html"; });
       root.querySelectorAll("[data-decision]").forEach((button) => button.addEventListener("click", async () => {
         const decision = button.dataset.decision;
         if (!window.confirm(decision === "approved" ? "اعتماد هذا المحامي؟" : "رفض ملف هذا المحامي؟")) return;
@@ -243,6 +315,7 @@
     await api.configure();
     const role = document.body.dataset.role;
     const page = document.body.dataset.page;
+    if (document.getElementById("publicHeader") || page === "login") await syncPublicHeader();
     if (role === "verifier" && document.body.dataset.appPage === "verifier-dashboard") {
       if (!api.enabled) throw new Error("تحتاج مساحة المراجعة إلى خادم موصول");
       await initVerifier();
@@ -275,8 +348,15 @@
   document.addEventListener("DOMContentLoaded", () => {
     window.MOWAKAL_NAV.initNavigation();
     window.MOWAKAL_NAV.initPublicHeader();
+    updatePublicHeader(api.hasToken ? api.user : null);
     ui.bindUI();
-    initPage().catch((error) => showLoadError(error.message));
+    initPage().catch((error) => {
+      if (error.status === 401 && document.body.dataset.role) {
+        window.location.href = "../login.html";
+        return;
+      }
+      showLoadError(error.message);
+    });
     document.querySelectorAll("[data-year]").forEach((element) => { element.textContent = new Date().getFullYear(); });
   });
 })();

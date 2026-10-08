@@ -54,6 +54,14 @@
     display: none;
   }
 
+  .public-header__identity {
+    max-width: 118px;
+  }
+
+  .public-header__actions [data-dashboard-link] {
+    display: inline-flex;
+  }
+
   .dashboard-layout {
     display: block;
   }
@@ -252,6 +260,18 @@
 
 @media (max-width: 480px) {
   .public-header__actions .button--primary {
+    display: none;
+  }
+
+  .public-header__actions [data-dashboard-link] {
+    display: inline-flex;
+  }
+
+  .public-header__identity {
+    max-width: 92px;
+  }
+
+  .public-header__identity-role {
     display: none;
   }
 

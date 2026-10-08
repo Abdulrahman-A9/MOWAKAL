@@ -86,6 +86,32 @@
   white-space: nowrap;
 }
 
+.public-header__identity {
+  display: grid;
+  min-width: 0;
+  max-width: 170px;
+  gap: 3px;
+  line-height: 1.15;
+  text-align: right;
+}
+
+.public-header__identity-name {
+  overflow: hidden;
+  color: var(--navy-900);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.public-header__identity-role {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mobile-nav-toggle {
   display: none;
   width: 42px;

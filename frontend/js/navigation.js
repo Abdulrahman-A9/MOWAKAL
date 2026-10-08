@@ -44,7 +44,7 @@
     const config = configs[role] || configs.client;
     const current = document.body.dataset.appPage || document.body.dataset.page || "";
     const groups = config.groups.map((group) => `<section class="sidebar-section"><h2 class="sidebar-section__title">${group.label}</h2><div class="sidebar-section__links">${group.items.map((item) => renderLink(current, item)).join("")}</div></section>`).join("");
-    return `<aside class="dashboard-sidebar" aria-label="القائمة الجانبية"><button class="sidebar-close" type="button" aria-label="إغلاق القائمة" data-sidebar-close>×</button><a class="brand" href="${prefix()}index.html" aria-label="العودة للرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy"><strong>MOWAKAL</strong><small>منصة الخدمات القانونية</small></span></a><div class="sidebar-context"><span class="sidebar-label">${config.label}</span><span class="sidebar-context__status"><i></i> متصل الآن</span></div><nav class="sidebar-nav">${groups}</nav><div class="sidebar-user"><span class="avatar avatar--sm avatar--light" aria-hidden="true">${config.user[0].slice(0, 2)}</span><span class="sidebar-user__copy"><strong>${config.user[0]}</strong><span>${config.user[1]}</span></span><span class="sidebar-user__chevron" aria-hidden="true">‹</span></div></aside>`;
+    return `<aside class="dashboard-sidebar" aria-label="القائمة الجانبية"><button class="sidebar-close" type="button" aria-label="إغلاق القائمة" data-sidebar-close>×</button><a class="brand" href="${prefix()}index.html" aria-label="العودة للرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy"><strong>MOWAKAL</strong><small>منصة الخدمات القانونية</small></span></a><div class="sidebar-context"><span class="sidebar-label">${config.label}</span><span class="sidebar-context__status"><i></i> متصل الآن</span></div><nav class="sidebar-nav">${groups}</nav><div class="sidebar-user"><span class="avatar avatar--sm avatar--light" aria-hidden="true" data-sidebar-user-initials>${config.user[0].slice(0, 2)}</span><span class="sidebar-user__copy"><strong data-sidebar-user-name>${config.user[0]}</strong><span data-sidebar-user-role>${config.user[1]}</span></span><span class="sidebar-user__chevron" aria-hidden="true">‹</span></div></aside>`;
   }
 
   function publicHeaderMarkup() {
@@ -52,7 +52,75 @@
     const home = prefix() + "index.html";
     const howItWorks = current === "home" ? "#how-it-works" : home + "#how-it-works";
     const services = current === "home" ? "#services" : home + "#services";
-    return `<header class="public-header"><div class="container public-header__inner"><a class="brand" href="${home}" aria-label="العودة إلى الصفحة الرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy"><strong>MOWAKAL</strong><small>منصة الخدمات القانونية</small></span></a><nav class="public-nav" id="public-nav" aria-label="التنقل الرئيسي"><a class="public-nav__link ${current === "home" ? "is-active" : ""}" href="${home}">الرئيسية</a><a class="public-nav__link ${current === "lawyers" || current === "lawyer-profile" ? "is-active" : ""}" href="${prefix()}client/lawyers.html">المحامون</a><a class="public-nav__link ${current === "service-request" ? "is-active" : ""}" href="${services}">الخدمات</a><a class="public-nav__link" href="${howItWorks}">كيف تعمل</a></nav><div class="public-header__actions"><a class="button button--outline button--small" href="${prefix()}login.html">تسجيل الدخول</a><a class="button button--primary button--small" href="${prefix()}register.html">إنشاء حساب</a><button class="mobile-nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" aria-controls="public-nav" data-public-nav-toggle>☰</button></div></div></header>`;
+    return `<header class="public-header"><div class="container public-header__inner"><a class="brand" href="${home}" aria-label="العودة إلى الصفحة الرئيسية"><span class="brand__mark" aria-hidden="true">م</span><span class="brand__copy"><strong>MOWAKAL</strong><small>منصة الخدمات القانونية</small></span></a><nav class="public-nav" id="public-nav" aria-label="التنقل الرئيسي"><a class="public-nav__link ${current === "home" ? "is-active" : ""}" href="${home}">الرئيسية</a><a class="public-nav__link ${current === "lawyers" || current === "lawyer-profile" ? "is-active" : ""}" href="${prefix()}client/lawyers.html">المحامون</a><a class="public-nav__link ${current === "service-request" ? "is-active" : ""}" href="${services}">الخدمات</a><a class="public-nav__link" href="${howItWorks}">كيف تعمل</a></nav><div class="public-header__actions"><a class="button button--outline button--small" data-auth-action href="${prefix()}login.html">تسجيل الدخول</a><a class="button button--primary button--small" data-auth-action href="${prefix()}register.html">إنشاء حساب</a><button class="mobile-nav-toggle" type="button" aria-label="فتح القائمة" aria-expanded="false" aria-controls="public-nav" data-public-nav-toggle>☰</button></div></div></header>`;
+  }
+
+  function updatePublicHeader(user) {
+    const host = document.getElementById("publicHeader");
+    const actions = host?.querySelector(".public-header__actions");
+    if (!actions) return;
+
+    actions.querySelectorAll("[data-auth-action], [data-authenticated-action]").forEach((item) => item.remove());
+    const toggle = actions.querySelector("[data-public-nav-toggle]");
+    const insert = (element) => actions.insertBefore(element, toggle || null);
+    const dashboards = {
+      client: ["client/dashboard.html", "عميل"],
+      lawyer: ["lawyer/dashboard.html", "مقدم خدمة قانونية"],
+      admin: ["admin/dashboard.html", "مدير المنصة"],
+      verifier: ["verifier/dashboard.html", "مراجع التوثيق"]
+    };
+
+    if (!user || !dashboards[user.role]) {
+      const login = document.createElement("a");
+      login.className = "button button--outline button--small";
+      login.href = prefix() + "login.html";
+      login.dataset.authAction = "";
+      login.textContent = "تسجيل الدخول";
+      const register = document.createElement("a");
+      register.className = "button button--primary button--small";
+      register.href = prefix() + "register.html";
+      register.dataset.authAction = "";
+      register.textContent = "إنشاء حساب";
+      insert(login);
+      insert(register);
+      return;
+    }
+
+    const identity = document.createElement("span");
+    identity.className = "public-header__identity";
+    identity.dataset.authenticatedAction = "";
+    const name = document.createElement("strong");
+    name.className = "public-header__identity-name";
+    name.textContent = user.name || user.email || "حسابي";
+    const role = document.createElement("small");
+    role.className = "public-header__identity-role";
+    role.textContent = dashboards[user.role][1];
+    identity.append(name, role);
+
+    const manage = document.createElement("a");
+    manage.className = "button button--primary button--small public-header__manage";
+    manage.href = prefix() + dashboards[user.role][0];
+    manage.dataset.authenticatedAction = "";
+    manage.dataset.dashboardLink = "";
+    manage.textContent = "إدارة";
+    manage.setAttribute("aria-label", "إدارة حساب " + (user.name || dashboards[user.role][1]));
+
+    insert(identity);
+    insert(manage);
+  }
+
+  function updateDashboardUser(user) {
+    const host = document.querySelector(".sidebar-user");
+    if (!host || !user) return;
+    const roles = { client: "عميل", lawyer: "مقدم خدمة قانونية", admin: "مدير المنصة", verifier: "مراجع التوثيق" };
+    const name = String(user.name || user.email || "حسابي");
+    const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("");
+    const nameNode = host.querySelector("[data-sidebar-user-name]");
+    const roleNode = host.querySelector("[data-sidebar-user-role]");
+    const initialsNode = host.querySelector("[data-sidebar-user-initials]");
+    if (nameNode) nameNode.textContent = name;
+    if (roleNode) roleNode.textContent = roles[user.role] || "مستخدم";
+    if (initialsNode) initialsNode.textContent = initials || "م";
   }
 
   function initPublicHeader() {
@@ -75,6 +143,7 @@
     const host = document.getElementById("dashboardSidebar");
     if (!host) return;
     host.innerHTML = sidebarMarkup(document.body.dataset.role);
+    updateDashboardUser(window.MOWAKAL_API?.user);
     const layout = document.querySelector(".dashboard-layout");
     const backdrop = document.querySelector("[data-sidebar-backdrop]");
     const close = host.querySelector("[data-sidebar-close]");
@@ -90,5 +159,5 @@
     backdrop?.addEventListener("click", () => setOpen(false));
   }
 
-  window.MOWAKAL_NAV = { initNavigation, initPublicHeader, sidebarMarkup, publicHeaderMarkup };
+  window.MOWAKAL_NAV = { initNavigation, initPublicHeader, updatePublicHeader, updateDashboardUser, sidebarMarkup, publicHeaderMarkup };
 })();

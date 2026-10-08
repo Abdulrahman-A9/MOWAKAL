@@ -136,7 +136,7 @@
         api.request("/api/admin/activity", { authenticated: true }),
         api.request("/api/admin/stats", { authenticated: true })
       ]);
-      data.users = users.users.map((item) => ({ id: item.id, role: roles[item.role] || item.role, status: statuses[item.status] || item.status }));
+      data.users = users.users.map((item) => ({ id: item.id, name: item.name, roleKey: item.role, role: roles[item.role] || item.role, statusKey: item.status, status: statuses[item.status] || item.status, createdAt: item.createdAt }));
       data.services = services.services;
       data.activities = activity.activities;
       data.adminStats = stats.stats;

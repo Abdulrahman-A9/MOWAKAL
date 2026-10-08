@@ -66,6 +66,174 @@
     draw();
   }
 
+  function adminUsersLivePage() {
+    const roleLabel = (role) => ({ client: "عميل", lawyer: "محامٍ", admin: "مدير المنصة", verifier: "مراجع التوثيق" }[role] || role);
+    const statusLabel = (status) => status === "active" ? "نشط" : "موقوف";
+    const dateLabel = (value) => value ? new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" }).format(new Date(value)) : "—";
+    const draw = () => {
+      wrap("المستخدمون", "إدارة حسابات المنصة ومراجعة المعلومات المهنية العامة للمحامين.", '<section class="card card--padded"><div class="directory-summary"><div><strong data-user-count></strong><span>التفاصيل تعرض بيانات الحساب والملف المهني العام فقط، ولا تعرض محتوى الطلبات أو التواصل الخاص.</span></div></div>' + tabs([["all", "الكل"], ["client", "العملاء"], ["lawyer", "المحامون"], ["admin", "مديرو المنصة"], ["verifier", "مراجعو التوثيق"]]) + toolbar('<select class="filter-select" data-user-status aria-label="تصفية حسب حالة الحساب"><option value="">كل الحالات</option><option value="active">نشط</option><option value="suspended">موقوف</option></select>') + '<div class="data-table-wrap"><table class="data-table"><thead><tr><th>المستخدم</th><th>الدور</th><th>الحالة</th><th>تاريخ التسجيل</th><th>الإجراءات</th></tr></thead><tbody data-users-table></tbody></table></div></section>');
+      const target = root().querySelector("[data-users-table]");
+      const search = root().querySelector("[data-search]");
+      const status = root().querySelector("[data-user-status]");
+      const count = root().querySelector("[data-user-count]");
+      let roleFilter = "all";
+      const list = () => {
+        const query = search.value.trim().toLocaleLowerCase("ar");
+        const matches = d.users.filter((item) => {
+          const searchable = [item.id, item.name, item.role].join(" ").toLocaleLowerCase("ar");
+          return (roleFilter === "all" || item.roleKey === roleFilter) && (!status.value || item.statusKey === status.value) && (!query || searchable.includes(query));
+        });
+        count.textContent = matches.length + " مستخدم";
+        target.innerHTML = matches.length ? matches.map((item) => '<tr><td>' + person(item.name || "مستخدم", "رقم الحساب " + item.id, (item.name || "م").slice(0, 2)) + '</td><td>' + e(item.role) + '</td><td>' + e(statusLabel(item.statusKey)) + '</td><td>' + e(dateLabel(item.createdAt)) + '</td><td><div class="row-actions"><button type="button" class="button button--outline button--small" data-user-open="details" data-user-id="' + e(item.id) + '">التفاصيل</button><button type="button" class="button button--primary button--small" data-user-open="manage" data-user-id="' + e(item.id) + '">الإدارة</button></div></td></tr>').join("") : '<tr><td colspan="5">' + empty("لا توجد نتائج", "جرّب تغيير الفلتر أو عبارة البحث.") + '</td></tr>';
+      };
+      root().insertAdjacentHTML("beforeend", '<div class="modal-backdrop" data-admin-user-modal hidden><section class="modal admin-management-modal" role="dialog" aria-modal="true" aria-labelledby="admin-user-modal-title"><div class="modal__header"><div><h2 id="admin-user-modal-title">تفاصيل الحساب</h2><p data-admin-user-modal-note></p></div><button class="modal__close" type="button" aria-label="إغلاق" data-close-admin-user>×</button></div><div class="modal__body" data-admin-user-modal-body></div></section></div>');
+      const modal = root().querySelector("[data-admin-user-modal]");
+      const modalBody = modal.querySelector("[data-admin-user-modal-body]");
+      const closeModal = () => { modal.hidden = true; modalBody.innerHTML = ""; };
+      const showUser = async (id, mode) => {
+        const title = root().querySelector("#admin-user-modal-title");
+        const note = modal.querySelector("[data-admin-user-modal-note]");
+        title.textContent = mode === "details" ? "تفاصيل الحساب" : "إدارة الحساب";
+        note.textContent = "بيانات الحساب المهنية والعامة فقط؛ لا تتضمن سجلات العميل والمحامي الخاصة.";
+        modalBody.innerHTML = '<p role="status">جارٍ تحميل بيانات الحساب…</p>';
+        modal.hidden = false;
+        try {
+          const result = await api().request("/api/admin/users/" + encodeURIComponent(id), { authenticated: true });
+          const user = result.user;
+          const lawyer = user.lawyer;
+          const rows = [
+            ["الاسم", user.name], ["البريد الإلكتروني", user.email || "—"], ["رقم الجوال", user.phone || "—"],
+            ["المدينة", user.city || "—"], ["نوع الحساب", roleLabel(user.role)], ["حالة الحساب", statusLabel(user.status)],
+            ["تاريخ التسجيل", dateLabel(user.createdAt)]
+          ];
+          if (lawyer) rows.push(["رقم الرخصة", lawyer.license || "—"], ["التخصص", lawyer.specialty || "—"], ["سنوات الخبرة", String(lawyer.experience)], ["التقييم", ui.formatRating(lawyer.rating, lawyer.reviews), true], ["حالة التوثيق", lawyer.verificationStatus === "approved" ? "معتمد" : lawyer.verificationStatus === "rejected" ? "مرفوض" : "بانتظار المراجعة"]);
+          const detailHtml = '<div class="detail-grid">' + rows.map(([label, value, html]) => '<div class="detail-item"><span>' + e(label) + '</span><strong>' + (html ? value : e(value)) + '</strong></div>').join("") + '</div>' + (lawyer?.bio ? '<section class="admin-user-bio"><h3>النبذة المهنية</h3><p>' + e(lawyer.bio) + '</p></section>' : "") + (Array.isArray(lawyer?.services) && lawyer.services.length ? '<section class="admin-user-bio"><h3>مجالات الخدمة</h3><div class="chips">' + lawyer.services.map((service) => '<span class="badge badge--neutral">' + e(service) + '</span>').join("") + '</div></section>' : "");
+          if (mode === "details") { modalBody.innerHTML = detailHtml; return; }
+          const isAdmin = user.role === "admin";
+          const isSelf = String(user.id) === String(api().user?.id);
+          const stateAction = user.status === "active" ? "suspend" : "activate";
+          const stateButton = !isAdmin && !isSelf ? '<button type="button" class="button ' + (stateAction === "suspend" ? "button--danger" : "button--primary") + '" data-user-action="' + stateAction + '">' + (stateAction === "suspend" ? "إيقاف الحساب" : "تفعيل الحساب") + '</button>' : "";
+          const verificationButtons = lawyer?.verificationStatus === "pending" ? '<div class="admin-action-group"><h3>مراجعة الملف المهني</h3><p>هذه الخطوة تخص الرخصة والملف المهني العام فقط.</p><button type="button" class="button button--primary" data-user-action="approve_lawyer">اعتماد المحامي</button><button type="button" class="button button--outline" data-user-action="reject_lawyer">رفض التوثيق</button></div>' : "";
+          const deleteButton = !isAdmin && !isSelf ? '<div class="admin-action-group admin-action-group--danger"><h3>حذف الحساب</h3><p>الحسابات المرتبطة بطلبات أو سجلات محفوظة لا تُحذف؛ يمكن إيقافها بدلًا من حذف تاريخها.</p><button type="button" class="button button--danger" data-user-action="delete">حذف الحساب</button></div>' : "";
+          modalBody.innerHTML = detailHtml + '<div class="admin-user-actions">' + stateButton + verificationButtons + deleteButton + (isAdmin ? '<p class="field-help">إدارة حسابات مديري المنصة تتم خارج هذه الصفحة حفاظًا على استمرارية الصلاحيات.</p>' : "") + '</div>';
+        } catch (error) { modalBody.innerHTML = '<p role="alert">' + e(error.message) + '</p>'; }
+      };
+      root().addEventListener("click", async (event) => {
+        const close = event.target.closest("[data-close-admin-user]");
+        if (close || event.target === modal) { closeModal(); return; }
+        const open = event.target.closest("[data-user-open]");
+        if (open) { await showUser(open.dataset.userId, open.dataset.userOpen); return; }
+        const actionButton = event.target.closest("[data-user-action]");
+        if (!actionButton) return;
+        const currentId = modal.dataset.userId;
+        const action = actionButton.dataset.userAction;
+        if (!currentId) return;
+        const prompts = { suspend: "هل تريد إيقاف هذا الحساب؟ لن يتمكن صاحبه من استخدام المنصة حتى إعادة تفعيله.", activate: "هل تريد إعادة تفعيل هذا الحساب؟", approve_lawyer: "هل راجعت الرخصة والملف المهني وتريد اعتماد المحامي؟", reject_lawyer: "هل تريد رفض توثيق هذا الملف المهني؟", delete: "سيُحذف الحساب نهائيًا إذا لم يكن مرتبطًا بسجلات. إذا كان مرتبطًا، سيُرفض الحذف للحفاظ على السجلات. هل تريد المتابعة؟" };
+        if (!window.confirm(prompts[action])) return;
+        actionButton.disabled = true;
+        try {
+          if (action === "delete") await api().request("/api/admin/users/" + encodeURIComponent(currentId), { method: "DELETE", authenticated: true });
+          else await api().request("/api/admin/users/" + encodeURIComponent(currentId), { method: "PATCH", authenticated: true, body: { action } });
+          const success = { suspend: "تم إيقاف الحساب.", activate: "تم تفعيل الحساب.", approve_lawyer: "تم اعتماد الملف المهني.", reject_lawyer: "تم رفض التوثيق.", delete: "تم حذف الحساب." };
+          if (action === "delete") d.users = d.users.filter((item) => String(item.id) !== String(currentId));
+          else if (action === "suspend" || action === "activate") {
+            const user = d.users.find((item) => String(item.id) === String(currentId));
+            if (user) { user.statusKey = action === "activate" ? "active" : "suspended"; user.status = statusLabel(user.statusKey); }
+          }
+          closeModal();
+          list();
+          ui.showToast(success[action], "success");
+        } catch (error) { ui.showToast(error.message, "danger"); actionButton.disabled = false; }
+      });
+      modal.addEventListener("click", (event) => { if (event.target === modal) closeModal(); });
+      const filterButtons = root().querySelectorAll("[data-filter]");
+      filterButtons.forEach((buttonEl) => buttonEl.addEventListener("click", () => { filterButtons.forEach((item) => item.classList.remove("is-active")); buttonEl.classList.add("is-active"); roleFilter = buttonEl.dataset.filter; list(); }));
+      search.addEventListener("input", list);
+      status.addEventListener("change", list);
+      list();
+    };
+    draw();
+    root().addEventListener("click", (event) => {
+      const open = event.target.closest("[data-user-open]");
+      if (open) root().querySelector("[data-admin-user-modal]")?.setAttribute("data-user-id", open.dataset.userId);
+    }, { capture: true });
+  }
+
+  function adminServicesLivePage() {
+    let activeFilter = "all";
+    let searchText = "";
+    const renderRows = () => {
+      const body = root().querySelector("[data-services-table]");
+      const rows = d.services.filter((item) => (activeFilter === "all" || (activeFilter === "active") === item.active) && (!searchText || [item.name, item.category, item.type, item.id].join(" ").toLocaleLowerCase("ar").includes(searchText)));
+      body.innerHTML = rows.length ? rows.map((item) => '<tr><td>' + person(item.name, item.id, item.icon) + '<small class="admin-service-description">' + e(item.description) + '</small></td><td>' + e(item.category) + '</td><td>' + e(item.type) + '</td><td>' + (item.active ? ui.statusBadge("active", "متاحة") : ui.statusBadge("suspended", "متوقفة")) + '</td><td><div class="row-actions"><button type="button" class="button button--outline button--small" data-service-edit="' + e(item.id) + '">تعديل</button><button type="button" class="button button--ghost button--small" data-service-toggle="' + e(item.id) + '">' + (item.active ? "إيقاف" : "تفعيل") + '</button><button type="button" class="button button--danger button--small" data-service-delete="' + e(item.id) + '">حذف</button></div></td></tr>').join("") : '<tr><td colspan="5">' + empty("لا توجد خدمات مطابقة", "عدّل البحث أو أضف خدمة جديدة إلى الكتالوج.") + '</td></tr>';
+    };
+    const draw = () => {
+      wrap("الخدمات القانونية", "إضافة خدمات الكتالوج وتحديث بياناتها وإتاحتها للعملاء.", '<section class="card card--padded">' + toolbar('<select class="filter-select" data-service-filter aria-label="تصفية الخدمات"><option value="all">كل الخدمات</option><option value="active">المتاحة</option><option value="inactive">المتوقفة</option></select><button type="button" class="button button--primary button--small" data-service-new>إضافة خدمة</button>') + '<div class="data-table-wrap"><table class="data-table"><thead><tr><th>الخدمة</th><th>المجال</th><th>النوع</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody data-services-table></tbody></table></div></section>');
+      root().insertAdjacentHTML("beforeend", '<div class="modal-backdrop" data-service-modal hidden><section class="modal admin-management-modal" role="dialog" aria-modal="true" aria-labelledby="service-modal-title"><div class="modal__header"><div><h2 id="service-modal-title">إضافة خدمة</h2><p>تظهر الخدمة المتاحة للعملاء في كتالوج المنصة.</p></div><button class="modal__close" type="button" aria-label="إغلاق" data-close-service>×</button></div><div class="modal__body" data-service-modal-body></div></section></div>');
+      const modal = root().querySelector("[data-service-modal]");
+      const modalBody = modal.querySelector("[data-service-modal-body]");
+      const close = () => { modal.hidden = true; modalBody.innerHTML = ""; };
+      const openEditor = (item) => {
+        modal.dataset.serviceId = item?.id || "";
+        modal.querySelector("#service-modal-title").textContent = item ? "تعديل الخدمة" : "إضافة خدمة";
+        const field = (label, name, value, required = true) => '<label class="field"><span>' + label + '</span><input class="input" name="' + name + '" value="' + e(value || "") + '" maxlength="' + ({ name: 120, category: 80, type: 80, icon: 10 }[name] || 120) + '" ' + (required ? "required" : "") + '></label>';
+        modalBody.innerHTML = '<form class="admin-service-form" data-service-form><div class="form-grid">' + field("اسم الخدمة", "name", item?.name) + field("المجال", "category", item?.category) + field("نوع الخدمة", "type", item?.type) + field("الرمز", "icon", item?.icon || "⚖") + '</div><label class="field admin-service-description-field"><span>وصف الخدمة</span><textarea class="textarea" name="description" maxlength="500" required>' + e(item?.description || "") + '</textarea></label><p class="field-help">احرص على أن يوضح الوصف نطاق الخدمة دون تضمين بيانات خاصة بمستخدمين.</p><div class="form-actions"><button class="button button--primary" type="submit">حفظ الخدمة</button><button class="button button--outline" type="button" data-close-service>إلغاء</button></div></form>';
+        modal.hidden = false;
+        modal.querySelector('[name="name"]').focus();
+      };
+      root().addEventListener("click", async (event) => {
+        const closeButton = event.target.closest("[data-close-service]");
+        if (closeButton || event.target === modal) { close(); return; }
+        if (event.target.closest("[data-service-new]")) { openEditor(null); return; }
+        const editButton = event.target.closest("[data-service-edit]");
+        if (editButton) { openEditor(d.services.find((item) => item.id === editButton.dataset.serviceEdit)); return; }
+        const toggleButton = event.target.closest("[data-service-toggle]");
+        const deleteButton = event.target.closest("[data-service-delete]");
+        const selectedButton = toggleButton || deleteButton;
+        if (!selectedButton) return;
+        const item = d.services.find((entry) => entry.id === selectedButton.dataset.serviceToggle || entry.id === selectedButton.dataset.serviceDelete);
+        if (!item) return;
+        if (deleteButton && !window.confirm("سيتم حذف الخدمة إذا لم تكن مرتبطة بطلب سابق، وإلا ستُوقف مع بقاء السجلات القديمة. هل تريد المتابعة؟")) return;
+        selectedButton.disabled = true;
+        try {
+          if (toggleButton) {
+            const result = await api().request("/api/admin/services/" + encodeURIComponent(item.id), { method: "PATCH", authenticated: true, body: { active: !item.active } });
+            Object.assign(item, result.service);
+            ui.showToast(item.active ? "أصبحت الخدمة متاحة للعملاء." : "تم إيقاف الخدمة عن الطلبات الجديدة.", "success");
+          } else {
+            const result = await api().request("/api/admin/services/" + encodeURIComponent(item.id), { method: "DELETE", authenticated: true });
+            if (result.deleted) d.services = d.services.filter((entry) => entry.id !== item.id);
+            else item.active = false;
+            ui.showToast(result.deleted ? "تم حذف الخدمة." : "الخدمة مرتبطة بسجلات سابقة؛ أُوقفت مع الحفاظ عليها.", "success");
+          }
+          renderRows();
+        } catch (error) { ui.showToast(error.message, "danger"); selectedButton.disabled = false; }
+      });
+      root().addEventListener("submit", async (event) => {
+        const form = event.target.closest("[data-service-form]");
+        if (!form) return;
+        event.preventDefault();
+        const submit = form.querySelector('[type="submit"]');
+        submit.disabled = true;
+        const body = Object.fromEntries(new FormData(form).entries());
+        try {
+          const serviceId = modal.dataset.serviceId;
+          const result = await api().request(serviceId ? "/api/admin/services/" + encodeURIComponent(serviceId) : "/api/admin/services", { method: serviceId ? "PATCH" : "POST", authenticated: true, body });
+          if (serviceId) Object.assign(d.services.find((item) => item.id === serviceId), result.service);
+          else d.services.push(result.service);
+          close();
+          renderRows();
+          ui.showToast(serviceId ? "تم تحديث بيانات الخدمة." : "تمت إضافة الخدمة إلى الكتالوج.", "success");
+        } catch (error) { ui.showToast(error.message, "danger"); submit.disabled = false; }
+      });
+      modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+      root().querySelector("[data-search]").addEventListener("input", (event) => { searchText = event.target.value.trim().toLocaleLowerCase("ar"); renderRows(); });
+      root().querySelector("[data-service-filter]").addEventListener("change", (event) => { activeFilter = event.target.value; renderRows(); });
+      renderRows();
+    };
+    draw();
+  }
+
   function adminDashboard() {
     const lawyerCount = d.users.filter((item) => item.role === "محامٍ").length;
     const activeServices = d.services.filter((item) => item.active).length;
@@ -244,7 +412,7 @@
   }
   function verifications() { admin("verifications"); const body = '<section class="card card--padded">' + toolbar() + '<div class="data-table-wrap"><table class="data-table"><thead><tr><th>المحامي</th><th>الترخيص</th><th>التخصص</th><th>المدينة</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>' + d.verifications.map((item) => '<tr><td>' + person(item.name, item.id, item.name.slice(0, 2)) + '</td><td>' + e(item.license) + '</td><td>' + e(item.specialty) + '</td><td>' + e(item.city) + '</td><td>' + ui.statusBadge(item.status) + '</td><td>' + button("مراجعة", href("admin/verification-details.html?id=" + item.id), "button button--outline button--small") + '</td></tr>').join("") + '</tbody></table></div></section>'; set(heading("توثيق المحامين", "راجع الطلبات المهنية قبل اعتماد الحسابات.") + body); }
   function verificationDetails() { const item = find(d.verifications, qp("id", "VER-001")); if (!item) { wrap("طلب التوثيق غير موجود", "تعذر العثور على الطلب.", '<section class="card card--padded">' + empty("لم يتم العثور على الطلب") + '</section>'); return; } wrap("تفاصيل التوثيق", item.name, "راجع المعلومات المهنية وبيانات المستندات قبل اتخاذ القرار.", button("العودة للطلبات", href("admin/lawyer-verifications.html"), "button button--outline")); root().insertAdjacentHTML("beforeend", '<div class="detail-layout"><section class="card card--padded">' + header("المعلومات المهنية", "بيانات مقدمة من المحامي.") + info([["الاسم", item.name], ["رقم الترخيص", item.license], ["التخصص", item.specialty], ["المدينة", item.city], ["سنوات الخبرة", item.experience], ["الحالة", ui.statusBadge(item.status), true]]) + '</section><aside class="card card--padded">' + header("الإجراءات", "تحديث محاكٍ لحالة الطلب.") + '<div class="stack-actions"><button class="button button--primary\" data-verification=\"approved\">اعتماد المحامي</button><button class="button button--outline\" data-verification=\"more_info\">طلب معلومات إضافية</button><button class="button button--danger\" data-verification=\"rejected\">رفض الطلب</button></div></aside></div>'); root().addEventListener("click", (event) => { const action = event.target.closest("[data-verification]"); if (action) { item.status = action.dataset.verification; ui.showToast("تم تحديث حالة طلب التوثيق.", action.dataset.verification === "rejected" ? "danger" : "success"); } }); }
-  function adminServices() { set(heading("الخدمات القانونية", "إدارة كتالوج الخدمات المتاحة للعملاء.", '<section class="card card--padded">' + toolbar('<button class="button button--primary button--small\" data-add-service>إضافة خدمة</button>') + '<div class="data-table-wrap"><table class="data-table"><thead><tr><th>الخدمة</th><th>المجال</th><th>النوع</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>' + d.services.map((item) => '<tr><td>' + person(item.name, item.id, item.icon) + '</td><td>' + e(item.category) + '</td><td>' + e(item.type) + '</td><td>' + (item.active ? ui.statusBadge("active", "نشطة") : "موقوفة") + '</td><td><button class="button button--ghost button--small\" data-service-toggle>تفعيل / تعطيل</button></td></tr>').join("") + '</tbody></table></div></section>')); document.querySelector("[data-add-service]")?.addEventListener("click", () => ui.showToast("أدخل بيانات الخدمة من نموذج الإضافة.", "success")); }
+  function adminServices() { wrap("الخدمات القانونية", "عرض كتالوج الخدمات في وضع المعاينة.", '<section class="card card--padded"><p class="field-help">تتطلب إضافة الخدمات أو تعديلها أو حذفها اتصالًا فعليًا بخادم المنصة؛ لن تُعرض هنا إجراءات توحي بحفظ غير حقيقي.</p><div class="data-table-wrap"><table class="data-table"><thead><tr><th>الخدمة</th><th>المجال</th><th>النوع</th><th>الحالة</th></tr></thead><tbody>' + d.services.map((item) => '<tr><td>' + person(item.name, item.id, item.icon) + '</td><td>' + e(item.category) + '</td><td>' + e(item.type) + '</td><td>' + (item.active ? ui.statusBadge("active", "متاحة") : "متوقفة") + '</td></tr>').join("") + '</tbody></table></div></section>'); }
   function reports() { wrap("التقارير", "ملخصات تشغيلية قابلة للربط لاحقًا بمصادر البيانات الفعلية.", '<div class="report-grid"><article class="card card--padded"><h2>أداء الطلبات</h2><p>توزيع الطلبات حسب الحالة خلال الشهر الحالي.</p><div class="report-bars"><span style="width:82%"><b>مكتملة</b><i>٣٤٪</i></span><span style="width:64%"><b>قيد التنفيذ</b><i>٢٨٪</i></span><span style="width:42%"><b>قيد المراجعة</b><i>١٨٪</i></span></div></article><article class="card card--padded"><h2>رضا العملاء</h2><p>متوسط التقييمات المنشورة.</p><strong class="report-number">٤٫٨ / ٥</strong><div class="review-stars">★★★★★</div></article><article class="card card--padded"><h2>التوثيق المهني</h2><p>طلبات مكتملة البيانات.</p><strong class="report-number">٨٦٪</strong></article></div>'); }
   function settings() { wrap("الإعدادات", "إعدادات عامة قابلة للتوسعة مع ربط لوحة الإدارة بالباكند.", '<section class="card card--padded"><form data-settings><div class="form-grid"><label>اسم المنصة<input value="MOWAKAL" required></label><label>البريد الإداري<input type="email" value="admin@mowakal.sa" required></label><label>المنطقة الزمنية<select><option>Asia/Riyadh</option></select></label><label>لغة الواجهة<select><option>العربية</option></select></label></div><label class="check-row"><input type="checkbox" checked> تفعيل إشعارات مراجعة التوثيق</label><label class="check-row"><input type="checkbox" checked> تسجيل الأحداث الإدارية</label><div class="form-actions"><button class="button button--primary\">حفظ الإعدادات</button></div></form></section>'); document.querySelector("[data-settings]").addEventListener("submit", (event) => { event.preventDefault(); ui.showToast("تم حفظ إعدادات المنصة.", "success"); }); }
   function init() { const page = document.body.dataset.appPage; if (!page) return; const map = { "client-dashboard": () => dashboard("client"), "client-services": services, "client-requests": () => requestsPage("client"), "client-request-details": () => requestDetails("client"), "client-new-request": wizard, "client-consultations": consultations, "client-cases": () => casesPage("client"), "client-case-details": () => caseDetails("client"), "client-appointments": () => { wrap("المواعيد", "نظّم مواعيدك القادمة وتابع الاجتماعات السابقة.", '<section class="card card--padded">' + header("قائمة المواعيد", "المواعيد المرتبطة بطلباتك.") + d.appointments.map((item) => '<div class="appointment-item"><span class="appointment-item__date">' + e(item.date) + '<strong>' + e(item.time) + '</strong></span><div><strong>' + e(item.title) + '</strong><span>' + e(lawyerName(item.lawyerId)) + '</span></div>' + ui.statusBadge(item.status) + '</div>').join("") + '</section>'); }, "client-documents": () => listPage("documents"), "client-messages": () => messages("client"), "client-payments": () => listPage("payments"), "client-reviews": () => admin("reviews"), "client-profile": () => profile("client"), "lawyer-dashboard": () => dashboard("lawyer"), "lawyer-requests": () => requestsPage("lawyer"), "lawyer-request-details": () => requestDetails("lawyer"), "lawyer-consultations": consultations, "lawyer-cases": () => casesPage("lawyer"), "lawyer-case-details": () => caseDetails("lawyer"), "lawyer-clients": () => listPage("clients"), "lawyer-client-details": clientDetails, "lawyer-documents": () => listPage("documents"), "lawyer-calendar": calendar, "lawyer-messages": () => messages("lawyer"), "lawyer-billing": billing, "lawyer-reviews": () => admin("reviews"), "lawyer-profile": () => profile("lawyer"), "admin-dashboard": () => dashboard("admin"), "admin-users": () => admin("users"), "admin-clients": () => admin("clients"), "admin-lawyers": () => admin("lawyers"), "admin-verifications": verifications, "admin-verification-details": verificationDetails, "admin-services": adminServices, "admin-requests": () => requestsPage("admin"), "admin-request-details": () => requestDetails("admin"), "admin-consultations": () => admin("consultations"), "admin-cases": () => admin("cases"), "admin-documents": () => admin("documents"), "admin-payments": () => admin("payments"), "admin-reviews": () => admin("reviews"), "admin-activity": activityPage, "admin-reports": reports, "admin-settings": settings }; (map[page] || (() => wrap("الصفحة غير متاحة", "تعذر فتح الصفحة المطلوبة.", '<section class="card card--padded">' + empty("الصفحة غير متاحة") + '</section>')))(); }
@@ -323,16 +491,8 @@
       return;
     }
     if (live() && document.body.dataset.appPage === "admin-services") {
-      const draw = () => {
-        wrap("الخدمات القانونية", "إدارة إتاحة الخدمات في الكتالوج العام.", '<section class="card card--padded"><div class="data-table-wrap"><table class="data-table"><thead><tr><th>الخدمة</th><th>المجال</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>' + d.services.map((item) => '<tr><td>' + e(item.name) + '</td><td>' + e(item.category) + '</td><td>' + (item.active ? "متاحة" : "موقوفة") + '</td><td><button type="button" class="button button--outline button--small" data-service-id="' + e(item.id) + '">' + (item.active ? "إيقاف" : "تفعيل") + '</button></td></tr>').join("") + '</tbody></table></div></section>');
-        root().querySelectorAll("[data-service-id]").forEach((buttonEl) => buttonEl.addEventListener("click", async () => {
-          const item = d.services.find((entry) => entry.id === buttonEl.dataset.serviceId);
-          buttonEl.disabled = true;
-          try { await api().request("/api/admin/services/" + encodeURIComponent(item.id), { method: "PATCH", authenticated: true, body: { active: !item.active } }); item.active = !item.active; draw(); ui.showToast("تم تحديث الخدمة.", "success"); }
-          catch (error) { ui.showToast(error.message, "danger"); buttonEl.disabled = false; }
-        }));
-      };
-      draw(); return;
+      adminServicesLivePage();
+      return;
     }
     if (live() && document.body.dataset.appPage === "admin-reports") {
       const counts = d.adminStats.requestCounts || {};
@@ -346,7 +506,8 @@
       return;
     }
     if (document.body.dataset.appPage === "admin-users") {
-      usersPage();
+      if (live()) adminUsersLivePage();
+      else usersPage();
       return;
     }
     init();

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { randomBytes } = require("node:crypto");
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -335,23 +336,148 @@ function createApp({ db, jwtSecret, allowedOrigins = [], logger = console }) {
   }));
 
   app.get("/api/admin/users", authenticate, allow("admin"), route(async (req, res) => {
-    const rows = await query("SELECT id, role, status FROM users ORDER BY id DESC LIMIT 100");
-    res.json({ status: "ok", users: rows.map((row) => ({ id: String(row.id), role: row.role, status: row.status })) });
+    const rows = await query("SELECT id, name, role, status, created_at FROM users ORDER BY id DESC LIMIT 100");
+    res.json({ status: "ok", users: rows.map((row) => ({ id: String(row.id), name: row.name, role: row.role, status: row.status, createdAt: iso(row.created_at) })) });
+  }));
+  app.get("/api/admin/users/:id", authenticate, allow("admin"), route(async (req, res) => {
+    const rows = await query("SELECT u.id, u.name, u.email, u.phone, u.city, u.role, u.status, u.created_at, l.id AS lawyer_id, l.license_number, l.specialty, l.experience, l.rating, l.reviews, l.bio, l.services_json, l.verified, l.verification_status FROM users u LEFT JOIN lawyers l ON l.user_id = u.id WHERE u.id = ?", [positiveId(req.params.id)]);
+    const row = rows[0];
+    if (!row) throw new HttpError(404, "الحساب غير موجود");
+    const user = {
+      id: String(row.id), name: row.name, email: row.email, phone: row.phone, city: row.city,
+      role: row.role, status: row.status, createdAt: iso(row.created_at),
+      lawyer: row.lawyer_id == null ? null : {
+        license: row.license_number, specialty: row.specialty, experience: Number(row.experience),
+        rating: Number(row.rating || 0), reviews: Number(row.reviews || 0), bio: row.bio || "",
+        services: parseAreas(row.services_json), verified: Boolean(row.verified),
+        verificationStatus: row.verification_status
+      }
+    };
+    res.json({ status: "ok", user });
+  }));
+  app.patch("/api/admin/users/:id", authenticate, allow("admin"), route(async (req, res) => {
+    const userId = positiveId(req.params.id);
+    const action = req.body?.action;
+    if (!["activate", "suspend", "approve_lawyer", "reject_lawyer"].includes(action)) bad("إجراء الحساب غير صالح");
+    const result = await transaction(async (connection) => {
+      const rows = await query("SELECT id, role, status FROM users WHERE id = ? FOR UPDATE", [userId], connection);
+      const target = rows[0];
+      if (!target) throw new HttpError(404, "الحساب غير موجود");
+      if (target.role === "admin") throw new HttpError(409, "لا يمكن إدارة حسابات مديري المنصة من هذه الصفحة");
+
+      if (action === "activate" || action === "suspend") {
+        if (userId === req.actor.id) throw new HttpError(409, "لا يمكن إيقاف حسابك الإداري");
+        const nextStatus = action === "activate" ? "active" : "suspended";
+        if (target.status !== nextStatus) {
+          await query("UPDATE users SET status = ? WHERE id = ?", [nextStatus, userId], connection);
+          await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, ?, 'user', ?)", [req.actor.id, "user_" + action, String(userId)], connection);
+        }
+        return { accountStatus: nextStatus };
+      }
+
+      if (target.role !== "lawyer") throw new HttpError(409, "إجراء التوثيق متاح لحسابات المحامين فقط");
+      const lawyers = await query("SELECT id, verification_status, verified FROM lawyers WHERE user_id = ? FOR UPDATE", [userId], connection);
+      const profile = lawyers[0];
+      if (!profile) throw new HttpError(409, "لا يوجد ملف مهني مرتبط بهذا الحساب");
+      const decision = action === "approve_lawyer" ? "approved" : "rejected";
+      if (profile.verification_status !== "pending") {
+        if (profile.verification_status === decision) return { verificationStatus: decision };
+        throw new HttpError(409, "تمت مراجعة الملف المهني سابقًا");
+      }
+      await query("UPDATE lawyers SET verified = ?, verification_status = ? WHERE id = ?", [decision === "approved" ? 1 : 0, decision, profile.id], connection);
+      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, ?, 'lawyer_verification', ?)", [req.actor.id, decision, String(profile.id)], connection);
+      return { verificationStatus: decision };
+    });
+    res.json({ status: "ok", ...result });
+  }));
+  app.delete("/api/admin/users/:id", authenticate, allow("admin"), route(async (req, res) => {
+    const userId = positiveId(req.params.id);
+    if (userId === req.actor.id) throw new HttpError(409, "لا يمكن حذف حسابك الإداري");
+    await transaction(async (connection) => {
+      const rows = await query("SELECT id, role FROM users WHERE id = ? FOR UPDATE", [userId], connection);
+      const target = rows[0];
+      if (!target) throw new HttpError(404, "الحساب غير موجود");
+      if (target.role === "admin") throw new HttpError(409, "لا يمكن حذف حساب مدير منصة من هذه الصفحة");
+      const lawyers = await query("SELECT id FROM lawyers WHERE user_id = ? FOR UPDATE", [userId], connection);
+      const references = [
+        ["SELECT COUNT(*) AS total FROM requests WHERE client_id = ?", userId],
+        ["SELECT COUNT(*) AS total FROM request_events WHERE actor_id = ?", userId],
+        ["SELECT COUNT(*) AS total FROM messages WHERE sender_id = ?", userId],
+        ["SELECT COUNT(*) AS total FROM appointments WHERE client_id = ?", userId],
+        ["SELECT COUNT(*) AS total FROM audit_events WHERE actor_id = ?", userId]
+      ];
+      if (lawyers[0]) {
+        references.push(["SELECT COUNT(*) AS total FROM requests WHERE lawyer_id = ?", lawyers[0].id]);
+        references.push(["SELECT COUNT(*) AS total FROM appointments WHERE lawyer_id = ?", lawyers[0].id]);
+      }
+      for (const [sql, id] of references) {
+        const counts = await query(sql, [id], connection);
+        if (Number(counts[0]?.total || 0) > 0) throw new HttpError(409, "لا يمكن حذف حساب مرتبط بسجلات محفوظة؛ أوقف الحساب بدلًا من ذلك للحفاظ على سلامة السجلات");
+      }
+      if (lawyers[0]) await query("DELETE FROM lawyers WHERE id = ?", [lawyers[0].id], connection);
+      await query("DELETE FROM users WHERE id = ?", [userId], connection);
+      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, 'user_deleted', 'user', ?)", [req.actor.id, String(userId)], connection);
+    });
+    res.json({ status: "ok", deleted: true });
   }));
   app.get("/api/admin/services", authenticate, allow("admin"), route(async (req, res) => {
     const rows = await query("SELECT id, name, category, description, type, icon, active, created_at FROM services ORDER BY id");
     res.json({ status: "ok", services: rows.map((item) => ({ id: item.id, name: item.name, category: item.category, description: item.description, type: item.type, icon: item.icon, active: Boolean(item.active), createdAt: iso(item.created_at) })) });
   }));
+  app.post("/api/admin/services", authenticate, allow("admin"), route(async (req, res) => {
+    const serviceFields = new Set(["name", "category", "description", "type", "icon"]);
+    if (Object.keys(req.body || {}).some((field) => !serviceFields.has(field))) bad("بيانات الخدمة غير صالحة");
+    const name = requiredText(req.body?.name, "اسم الخدمة", 120);
+    const category = requiredText(req.body?.category, "مجال الخدمة", 80);
+    const description = requiredText(req.body?.description, "وصف الخدمة", 500);
+    const type = requiredText(req.body?.type, "نوع الخدمة", 80);
+    const icon = requiredText(req.body?.icon, "رمز الخدمة", 10);
+    const serviceId = "SVC-" + randomBytes(8).toString("hex").toUpperCase();
+    const service = await transaction(async (connection) => {
+      await query("INSERT INTO services (id, name, category, description, type, icon, active) VALUES (?, ?, ?, ?, ?, ?, 1)", [serviceId, name, category, description, type, icon], connection);
+      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, 'service_created', 'service', ?)", [req.actor.id, serviceId], connection);
+      const rows = await query("SELECT id, name, category, description, type, icon, active, created_at FROM services WHERE id = ?", [serviceId], connection);
+      const item = rows[0];
+      return { id: item.id, name: item.name, category: item.category, description: item.description, type: item.type, icon: item.icon, active: Boolean(item.active), createdAt: iso(item.created_at) };
+    });
+    res.status(201).json({ status: "ok", service });
+  }));
   app.patch("/api/admin/services/:id", authenticate, allow("admin"), route(async (req, res) => {
-    if (typeof req.body?.active !== "boolean") bad("حالة الخدمة غير صالحة");
     const serviceId = requiredText(req.params.id, "معرّف الخدمة", 20);
-    await transaction(async (connection) => {
+    const values = req.body || {};
+    const allowedFields = { name: ["name", "اسم الخدمة", 120], category: ["category", "مجال الخدمة", 80], description: ["description", "وصف الخدمة", 500], type: ["type", "نوع الخدمة", 80], icon: ["icon", "رمز الخدمة", 10] };
+    const fields = Object.keys(values);
+    if (!fields.length || fields.some((field) => field !== "active" && !allowedFields[field])) bad("بيانات تحديث الخدمة غير صالحة");
+    if (Object.hasOwn(values, "active") && typeof values.active !== "boolean") bad("حالة الخدمة غير صالحة");
+    const updates = fields.map((field) => {
+      if (field === "active") return ["active", values.active ? 1 : 0];
+      const [column, label, max] = allowedFields[field];
+      return [column, requiredText(values[field], label, max)];
+    });
+    const service = await transaction(async (connection) => {
       const rows = await query("SELECT id FROM services WHERE id = ? FOR UPDATE", [serviceId], connection);
       if (!rows[0]) throw new HttpError(404, "الخدمة غير متاحة");
-      await query("UPDATE services SET active = ? WHERE id = ?", [req.body.active ? 1 : 0, serviceId], connection);
-      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, ?, 'service', ?)", [req.actor.id, req.body.active ? "service_enabled" : "service_disabled", serviceId], connection);
+      await query("UPDATE services SET " + updates.map(([column]) => column + " = ?").join(", ") + " WHERE id = ?", [...updates.map(([, value]) => value), serviceId], connection);
+      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, ?, 'service', ?)", [req.actor.id, fields.length === 1 && fields[0] === "active" ? (values.active ? "service_enabled" : "service_disabled") : "service_updated", serviceId], connection);
+      const updatedRows = await query("SELECT id, name, category, description, type, icon, active, created_at FROM services WHERE id = ?", [serviceId], connection);
+      const item = updatedRows[0];
+      return { id: item.id, name: item.name, category: item.category, description: item.description, type: item.type, icon: item.icon, active: Boolean(item.active), createdAt: iso(item.created_at) };
     });
-    res.json({ status: "ok", active: req.body.active });
+    res.json({ status: "ok", service });
+  }));
+  app.delete("/api/admin/services/:id", authenticate, allow("admin"), route(async (req, res) => {
+    const serviceId = requiredText(req.params.id, "معرّف الخدمة", 20);
+    const result = await transaction(async (connection) => {
+      const rows = await query("SELECT id FROM services WHERE id = ? FOR UPDATE", [serviceId], connection);
+      if (!rows[0]) throw new HttpError(404, "الخدمة غير موجودة");
+      const references = await query("SELECT COUNT(*) AS total FROM requests WHERE service_id = ?", [serviceId], connection);
+      const used = Number(references[0]?.total || 0) > 0;
+      if (used) await query("UPDATE services SET active = 0 WHERE id = ?", [serviceId], connection);
+      else await query("DELETE FROM services WHERE id = ?", [serviceId], connection);
+      await query("INSERT INTO audit_events (actor_id, action, resource_type, resource_id) VALUES (?, ?, 'service', ?)", [req.actor.id, used ? "service_archived" : "service_deleted", serviceId], connection);
+      return { deleted: !used, archived: used, active: false };
+    });
+    res.json({ status: "ok", ...result });
   }));
   app.get("/api/admin/stats", authenticate, allow("admin"), route(async (req, res) => {
     const [users, lawyers, requests] = await Promise.all([
@@ -384,7 +510,7 @@ function createApp({ db, jwtSecret, allowedOrigins = [], logger = console }) {
 
   app.use("/api", (req, res) => res.status(404).json({ status: "error", message: "المسار غير متاح" }));
   app.use((error, req, res, next) => {
-    const status = error.status || (error.code === "ER_DUP_ENTRY" ? 409 : 500);
+    const status = error.status || (["ER_DUP_ENTRY", "ER_ROW_IS_REFERENCED_2"].includes(error.code) ? 409 : 500);
     if (status >= 500) logger.error("api_error", { code: error.code || "INTERNAL", path: req.path });
     res.status(status).json({ status: "error", message: status === 500 ? "تعذر إكمال الطلب حاليًا" : status === 409 && !error.status ? "البيانات مستخدمة مسبقًا" : error.message });
   });
